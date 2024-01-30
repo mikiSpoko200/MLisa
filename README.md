@@ -2,52 +2,38 @@
 
 # Ideas
 
-### Idea 1:
+### Idea 1 (global set of representative patches):
 1. Collect patches from the whole set (or some random fragment) of images.
-2. Perform a K-means on the set of patches, getting K template patches (cluster centers).
-3. Make histograms of template patches (counting each patch as its closest template patch) in images.
-
-> Now that I'm reading it, it's not clear to me what point 3 is about? Don't we just need per label average histograms generated in step 4?
-
-4. Make an average histogram for each style/artist or perform logistic regression on histograms (?)
-
-> I don't see how logistic regression fits here? I see this as follows
->   - For each label take all images.
->   - Sample images and for each sample perform knn with regard to the set of reference patches generated in step 2.
->   - Generate histogram containing 
-
+2. Perform a K-means on the set of patches, getting K representative patches (cluster centers). K $\approx$ 1000 or even more?
+3. Make histograms of representative patches (counting each patch as its closest representative patch) in (some subset of) images.
+4. Make an average histogram for each style/artist.
 5. For each image to classify:
     - for each selected patch (e.g. through a sliding window, randomly):
-        - count it as its closest template patch
-    - make a histogram for this image out of counted template patches
+        - count it as its closest representative patch
+    - make a histogram for this image out of counted representative patches
     - classify the image as the label of average histogram closest to the just calculated histogram
-    (or class of the calculated histogram, pointed by logistic regression)
 
 We can use this idea first with 1x1 patches = pixels and their colors.
 Colors can be grouped with K-means, so then we compare histograms of these 'main' colors.
+But ultimately, we want to generalize: parametrize the patch size and other options.
 
-### Idea 2 (more weird, probably not worth it):
+### Idea 2 (different sets of representative patches for each style/artist):
 1. For each label (style/artist):
     - select a set of patches (e.g. from 10% percent of images)
-    - perform a K-means on the set of patches, getting K template patches (cluster centers)
+    - perform a K-means on the set of patches, getting K representative patches (cluster centers). K $\approx$ 200 (less per label than global number in idea 1!)
 This gives us a global set of |labels| * K template patches, which are labeled
 2. For each image to classify:
     - for each selected patch (e.g. through a sliding window, randomly):
-        - calculate distance (pixelwise, e.g. Euclidean) to every template patch in the global set
-        - get k (!= K) closest ones and let kNN decide the label of the patch
+        - calculate distance (pixelwise, e.g. Euclidean) to every template patch in all labels (styles/artists)
+        - for each label:
+            - average (pixelwise) some number of closest representative patches, e.g. 5
+        - classify the patch as the label of closest average representative patch
     - classify the image with the label, which occured the most across all considered patches
-
-Is this even sensible? Too expensive or not?
 
 Note: we don't necessarily have to classify every style/artist,
 we can at first learn to differentiate e.g. cubism from romanticism.
 
-### Functions we need
-
-- collect_patches(image)
-- make_a_histogram(image)
-
-### Idea 3
+### Idea 3 - basically idea 2 but more generalized
 
 **Training**
 
