@@ -2,7 +2,7 @@
 
 # Ideas
 
-### Idea 1 (global set of representative patches):
+### Idea 1 (global ,,palette" - set of representative patches):
 1. Collect patches from the whole set (or some random fragment) of images.
 2. Perform a K-means on the set of patches, getting K representative patches (cluster centers). K $\approx$ 1000 or even more?
 3. Make histograms of representative patches (counting each patch as its closest representative patch) in (some subset of) images.
@@ -17,7 +17,7 @@ We can use this idea first with 1x1 patches = pixels and their colors.
 Colors can be grouped with K-means, so then we compare histograms of these 'main' colors.
 But ultimately, we want to generalize: parametrize the patch size and other options.
 
-### Idea 2 (different sets of representative patches for each style/artist):
+### Idea 2 (different ,,palettes" (sets of representative patches) for each style/artist):
 1. For each label (style/artist):
     - select a set of patches (e.g. from 10% percent of images)
     - perform a K-means on the set of patches, getting K representative patches (cluster centers). K $\approx$ 200 (less per label than global number in idea 1!)
