@@ -21,14 +21,12 @@ def resize_image(image, height, width):
     return resized
 
 def color_histogram(image_array, colors):
-    histogram = {color:0 for color in map(tuple, colors.tolist())}
+    histogram = np.zeros((colors.shape[0]))
 
-    pixels = image_array.reshape(-1, 3) # shape = (h * w, 3)
+    pixels = image_array.reshape(-1, 3)
     for pixel in pixels:
         closest_color_idx = np.sum(np.abs(colors - pixel), axis=1).argmin()
-        histogram[tuple(colors[closest_color_idx])] += 1
+        histogram[closest_color_idx] += 1
 
-    # histogram = np.array([cnt / pixels.shape[0] for cnt in histogram.values()])
-
-    histogram = {color : cnt / pixels.shape[0] for color, cnt in histogram.items()}
+    histogram /= pixels.shape[0]
     return histogram

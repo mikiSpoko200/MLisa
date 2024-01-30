@@ -2,3 +2,4 @@ numpy
 pillow
 pandas
 matplotlib
+scikit-learn
