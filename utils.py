@@ -33,7 +33,8 @@ def get_patches(image: np.ndarray, coverage: float, random: bool):
     assert height >= PATCH_SIZE and width >= PATCH_SIZE
 
     if random:
-        patches = extract_patches_2d(image, (PATCH_SIZE, PATCH_SIZE), coverage)
+        patches_count = int(coverage * (height - PATCH_SIZE + 1) * (width - PATCH_SIZE + 1))
+        patches = extract_patches_2d(image, (PATCH_SIZE, PATCH_SIZE), max_patches=patches_count)
     else:
         # calculate strides
         stride_y, stride_x = 1, 1
