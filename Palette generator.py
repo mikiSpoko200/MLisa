@@ -6,7 +6,24 @@ import utils
 
 random = False
 coverage = 10
-patch_size = 16
+# patch_size = 16
+
+
+def contrast(image):
+    return (image - image.min()) / (image.max() - image.min())
+
+
+def normalize_patch(patch, eps=10):
+    return (patch - patch.mean()) / np.sqrt(patch.var() + eps)
+
+
+def whiten(x_list):
+    x_norm = (x_list - x_list.mean(axis=0)) / x_list.std(axis=0)
+    cov = np.cov(x_norm, rowvar=False)
+    u, s, v = np.linalg.svd(cov)
+
+    x_zca = u.dot(np.diag(1.0 / np.sqrt(s + 0.1))).dot(u.T).dot(x_norm.T).T
+    return x_zca
 
 
 def generate_global_palette(images, number_of_clusters, verbose=False):
@@ -21,7 +38,8 @@ def generate_global_palette(images, number_of_clusters, verbose=False):
             img_patches = utils.get_patches(image, coverage, random)
             patches.extend(img_patches)
 
-    patches_matrix = np.array(patches)
+    patches_matrix = np.vstack(patches)
+    patches_matrix = whiten(patches_matrix)
 
     kmeans = (
         MiniBatchKMeans(
