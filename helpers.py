@@ -1,9 +1,9 @@
 import matplotlib as plt
 
 
-def plot_image(X):
+def plot_image(x, size):
     plt.figure(figsize=(1.5, 1.5))
-    plt.imshow(X.reshape(32,32,3))
+    plt.imshow(x.reshape(size, size, 3))
     plt.show()
     plt.close()
 

@@ -4,10 +4,6 @@ from tqdm import tqdm
 
 import utils
 
-random = False
-coverage = 10
-# patch_size = 16
-
 
 def contrast(image):
     return (image - image.min()) / (image.max() - image.min())
@@ -26,7 +22,9 @@ def whiten(x_list):
     return x_zca
 
 
-def generate_global_palette(images, number_of_clusters, verbose=False):
+def generate_global_palette(images, number_of_clusters, batch_size, max_iter, random=False,
+    coverage=0.1, verbose=False, whitening=False):
+
     patches = []
 
     if verbose:
@@ -39,7 +37,9 @@ def generate_global_palette(images, number_of_clusters, verbose=False):
             patches.extend(img_patches)
 
     patches_matrix = np.vstack(patches)
-    patches_matrix = whiten(patches_matrix)
+
+    if whitening:
+        patches_matrix = whiten(patches_matrix)
 
     kmeans = (
         MiniBatchKMeans(
@@ -47,8 +47,9 @@ def generate_global_palette(images, number_of_clusters, verbose=False):
             random_state=0,
             verbose=verbose,
             n_init=1,
-            max_iter=200,
-            batch_size=10000)
+            max_iter=max_iter,
+            batch_size=batch_size)
         .fit(patches_matrix))
 
-    return kmeans.labels_, kmeans.cluster_centers_
+    # return kmeans.labels_, kmeans.cluster_centers_
+    return kmeans.cluster_centers_

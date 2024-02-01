@@ -1,5 +1,7 @@
-from PIL import Image
+import matplotlib as plt
 import numpy as np
+
+from PIL import Image
 from sklearn.feature_extraction.image import extract_patches_2d
 from sklearn.neighbors import KNeighborsClassifier
 
@@ -81,3 +83,9 @@ def histogram(neighbors: np.ndarray, patches_num: int):
     histogram /= patches_num
 
     return histogram
+
+def plot_image(x, size):
+    plt.figure(figsize=(1.5, 1.5))
+    plt.imshow(x.reshape(size, size, 3))
+    plt.show()
+    plt.close()
