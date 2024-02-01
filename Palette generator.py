@@ -23,8 +23,7 @@ def whiten(x_list):
 
 
 def generate_global_palette(images, number_of_clusters, batch_size, max_iter, random=False,
-    coverage=0.1, verbose=False, whitening=False):
-
+                            coverage=0.1, verbose=False, whitening=False):
     patches = []
 
     if verbose:
