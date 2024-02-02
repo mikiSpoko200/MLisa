@@ -22,7 +22,7 @@ def whiten(x_list):
     return x_zca
 
 
-def generate_global_palette(images, number_of_clusters, batch_size, max_iter, random=False,
+def generate_global_palette(images, number_of_clusters, batch_size=10000, max_iter=200, random=False,
                             coverage=0.1, verbose=False, whitening=False):
     patches = []
 
