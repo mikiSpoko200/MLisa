@@ -1,9 +1,20 @@
+import enum
+
 import matplotlib as plt
 import numpy as np
+
 
 from PIL import Image
 from sklearn.feature_extraction.image import extract_patches_2d
 from sklearn.neighbors import KNeighborsClassifier
+
+from enum import Enum
+
+class ClassificationTarget(enum.Enum):
+    """Enumeration representing the target features for classification."""
+    ARTIST = Enum.auto()
+    GENRE = Enum.auto()
+    STYLE = Enum.auto()
 
 PATCH_SIZE = 3  # patches PATCH_SIZE x PATCH_SIZE
 
