@@ -39,6 +39,8 @@ class ImageIterator(Iterable[list[bytes]]):
 
 
 class BatchLoader(Iterable[ImageIterator]):
+    """Iterable that produces iterators which themselves produce per class image batches of specified total size."""
+    
     _index: dict[ClassificationTarget, dict[str, list[str]]] = dict()
 
     def __init__(self, target: ClassificationTarget, dataset_path: str = "./wikiart", batch_size = 256 * 1024 * 1024):
@@ -67,9 +69,10 @@ class BatchLoader(Iterable[ImageIterator]):
         for target in ClassificationTarget:
             cls_encoding = BatchLoader._cls_encoding(target, csv_path)
             entires = pd.read_csv(os.path.join(csv_path, f"{target.name.lower()}_train.csv"), names=["path", "encoded_cls"])
+            # Convert class indices to their string counterparts
             entires["encoded_cls"] = entires["encoded_cls"].apply(lambda x: cls_encoding[x])
-            groupped = entires.groupby("encoded_cls")["path"].apply(list).to_dict()
-            index[target] = groupped
+            # Convert to dictionary of class to path lists (for that class)
+            index[target] = entires.groupby("encoded_cls")["path"].apply(list).to_dict()
         return index
 
 
