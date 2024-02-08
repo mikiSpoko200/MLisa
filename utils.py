@@ -76,17 +76,20 @@ def get_patches(image: np.ndarray, coverage: float, random: bool):
     return np.array(patches)
 
 
-def k_closest(patches: np.ndarray, palette: np.ndarray, k: int):
+def k_closest(patches: np.ndarray, palette: np.ndarray, k: int, neigh: KNeighborsClassifier | None = None):
     # TODO: run with n_jobs? - to test
-    neigh = KNeighborsClassifier(n_neighbors=k)
-    neigh.fit(palette, np.arange(palette.shape[0]))
+    if neigh is not None:
+        neigh = KNeighborsClassifier(n_neighbors=k)
+        neigh.fit(palette, np.arange(palette.shape[0]))
     closest = neigh.kneighbors(patches)
 
     return closest
 
 
-def histogram(neighbors: np.ndarray, patches_num: int):
+def histogram(neighbors: np.ndarray, patches_num: int) -> np.ndarray:
     neighbors = neighbors.flatten()
+    hist = np.zeros((neighbors.shape[0],))
+    hist[neighbors] += 1
     _, histogram = np.unique(neighbors, return_counts=True)
     histogram = histogram.astype("float64")
     histogram /= patches_num

@@ -22,8 +22,8 @@ def whiten(x_list):
     return x_zca
 
 
-def generate_global_palette(images, number_of_clusters, batch_size=10000, max_iter=200, random=False,
-                            coverage=0.1, verbose=False, whitening=False):
+def generate_palette(images: list[bytes], number_of_clusters: int, batch_size: int = 10000, max_iter: int = 200,
+                     random: bool = False, coverage: float = 0.1, verbose: bool = False, whitening: bool = False):
     patches = []
 
     if verbose:
@@ -36,6 +36,27 @@ def generate_global_palette(images, number_of_clusters, batch_size=10000, max_it
             patches.extend(img_patches)
 
     patches_matrix = np.vstack(patches)
+
+    if whitening:
+        patches_matrix = whiten(patches_matrix)
+
+    kmeans = (
+        MiniBatchKMeans(
+            n_clusters=number_of_clusters,
+            random_state=0,
+            verbose=verbose,
+            n_init=1,
+            max_iter=max_iter,
+            batch_size=batch_size)
+        .fit(patches_matrix))
+
+    # return kmeans.labels_, kmeans.cluster_centers_
+    return kmeans.cluster_centers_
+
+
+def merge_palettes(palettes: list[np.ndarray], number_of_clusters: int, batch_size: int = 10000, max_iter: int = 200,
+                   verbose: bool = False, whitening: bool = False):
+    patches_matrix = np.vstack(palettes)
 
     if whitening:
         patches_matrix = whiten(patches_matrix)

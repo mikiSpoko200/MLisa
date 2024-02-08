@@ -75,7 +75,7 @@ class BatchLoader(Iterable[ImageIterator]):
 
 def sample(loader: BatchLoader):
     for feature_batch_iterator in loader:
-            print(f"Class: {feature_batch_iterator.cls.replace("_", " ")}")
+            print(f'Class: {feature_batch_iterator.cls.replace("_", " ")}')
             for index, batch in enumerate(feature_batch_iterator):
                 print(f"  Batch {index:>3}: {sum(map(len, batch)) / (1024 * 1024):>7.3f} MB")
 
