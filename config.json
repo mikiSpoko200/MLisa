@@ -5,6 +5,13 @@
         "batch-size": "256 MiB"
     },
     "global-palette": {
-        "size": 10000
+        "size": 10000,
+        "coverage": 0.1,
+        "random": true,
+        "batching-k-means": {
+            "batch-size": 10000,
+            "max-iterations": 200,
+            "number-of-clusters": 10000
+        }
     }
 }

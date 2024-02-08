@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 from tqdm import tqdm
+from config import BatchingKMeansConfig
 
 import utils
 
@@ -54,8 +55,7 @@ def generate_palette(images: list[bytes], number_of_clusters: int, batch_size: i
     return kmeans.cluster_centers_
 
 
-def merge_palettes(palettes: list[np.ndarray], number_of_clusters: int, batch_size: int = 10000, max_iter: int = 200,
-                   verbose: bool = False, whitening: bool = False):
+def merge_palettes(palettes: list[np.ndarray], number_of_clusters: int, config: BatchingKMeansConfig, verbose: bool = False, whitening: bool = False):
     patches_matrix = np.vstack(palettes)
 
     if whitening:
@@ -67,9 +67,9 @@ def merge_palettes(palettes: list[np.ndarray], number_of_clusters: int, batch_si
             random_state=0,
             verbose=verbose,
             n_init=1,
-            max_iter=max_iter,
-            batch_size=batch_size)
-        .fit(patches_matrix))
+            max_iter=config.max_iterations,
+            batch_size=config.batch_size
+        ).fit(patches_matrix))
 
     # return kmeans.labels_, kmeans.cluster_centers_
     return kmeans.cluster_centers_
