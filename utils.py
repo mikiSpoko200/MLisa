@@ -7,6 +7,8 @@ from PIL import Image
 from sklearn.feature_extraction.image import extract_patches_2d
 from sklearn.neighbors import KNeighborsClassifier
 
+from config import Config, GlobalPaletteConfig
+
 
 class ClassificationTarget(enum.Enum):
     """Enumeration representing the target features for classification."""
@@ -15,7 +17,9 @@ class ClassificationTarget(enum.Enum):
     STYLE = enum.auto()
 
 
-PATCH_SIZE = 3  # patches PATCH_SIZE x PATCH_SIZE
+# TODO: move this to "*-palette" configurations
+PATCH_SIZE: int = 16  # patches PATCH_SIZE x PATCH_SIZE
+
 
 BASIC_COLORS = np.array(
     [
@@ -40,24 +44,25 @@ def read_image(path):
     return image
 
 
-def get_patches(image: np.ndarray, coverage: float, random: bool):
+def get_patches(image: np.ndarray, config: GlobalPaletteConfig):
     height, width = image.shape[0], image.shape[1]
     assert height >= PATCH_SIZE and width >= PATCH_SIZE
 
-    if random:
+    if config.random:
         patches_count = int(
-            coverage * (height - PATCH_SIZE + 1) * (width - PATCH_SIZE + 1)
+            config.coverage * (height - PATCH_SIZE + 1) * (width - PATCH_SIZE + 1)
         )
         patches = extract_patches_2d(
             image, (PATCH_SIZE, PATCH_SIZE), max_patches=patches_count
         ).reshape((-1, PATCH_SIZE * PATCH_SIZE * 3))
     else:
         # calculate strides
+        # TODO: move strides to config
         stride_y, stride_x = 1, 1
         curr_coverage = 1.0
         iter = 0
-        while curr_coverage > coverage:
-            coverage = 1.0 / (stride_x * stride_y)
+        while curr_coverage > config.coverage:
+            curr_coverage = 1.0 / (stride_x * stride_y)
             if iter % 2 == 0:
                 stride_y += 1
             else:
@@ -68,8 +73,8 @@ def get_patches(image: np.ndarray, coverage: float, random: bool):
         for upper_left_y in range(0, height - PATCH_SIZE + 1, stride_y):
             for upper_left_x in range(0, width - PATCH_SIZE + 1, stride_x):
                 patch = image[
-                    upper_left_y : upper_left_y + PATCH_SIZE,
-                    upper_left_x : upper_left_x + PATCH_SIZE,
+                    upper_left_y: upper_left_y + PATCH_SIZE,
+                    upper_left_x: upper_left_x + PATCH_SIZE,
                     :,
                 ].reshape((PATCH_SIZE * PATCH_SIZE * 3))
                 patches.append(patch)
