@@ -3,6 +3,9 @@ import bitmath
 import typing
 
 
+PROFILE = True
+
+
 @dataclasses.dataclass
 class BatchingKMeansConfig:
     batch_size: int
@@ -25,6 +28,7 @@ class GlobalPaletteConfig:
     coverage: float
     random: bool
     batching_k_means: BatchingKMeansConfig
+    patch_size: int
     parent: "Config | None" = None
 
     @classmethod
@@ -33,7 +37,8 @@ class GlobalPaletteConfig:
             size=int(json["size"]),
             coverage=float(json["coverage"]),
             random=bool(json["random"]),
-            batching_k_means=BatchingKMeansConfig.from_json(json["batching-k-means"])
+            batching_k_means=BatchingKMeansConfig.from_json(json["batching-k-means"]),
+            patch_size=int(json["patch-size"])
         )
         config.batching_k_means.parent = config
         return config
