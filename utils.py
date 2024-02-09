@@ -1,5 +1,6 @@
 import enum
 
+import bitmath
 import matplotlib as plt
 import numpy as np
 
@@ -7,7 +8,7 @@ from PIL import Image
 from sklearn.feature_extraction.image import extract_patches_2d
 from sklearn.neighbors import KNeighborsClassifier
 
-from config import Config, GlobalPaletteConfig
+from config import GlobalPaletteConfig
 
 
 class ClassificationTarget(enum.Enum):
@@ -19,7 +20,6 @@ class ClassificationTarget(enum.Enum):
 
 # TODO: move this to "*-palette" configurations
 PATCH_SIZE: int = 16  # patches PATCH_SIZE x PATCH_SIZE
-
 
 BASIC_COLORS = np.array(
     [
@@ -44,20 +44,21 @@ def read_image(path):
     return image
 
 
-def get_patches(image: np.ndarray, config: GlobalPaletteConfig):
+def get_patches(image: np.ndarray, config: GlobalPaletteConfig, max_patch_count: int | float):
     height, width = image.shape[0], image.shape[1]
-    assert height >= PATCH_SIZE and width >= PATCH_SIZE
+    assert height >= config.patch_size and width >= config.patch_size
 
+    # FIXME: should this use min?
+    sample_count = int(
+        min(config.coverage * (height - config.patch_size + 1) * (width - config.patch_size + 1), max_patch_count)
+    ) if type(max_patch_count) is int else max_patch_count
     if config.random:
-        patches_count = int(
-            config.coverage * (height - PATCH_SIZE + 1) * (width - PATCH_SIZE + 1)
-        )
-        patches = extract_patches_2d(
-            image, (PATCH_SIZE, PATCH_SIZE), max_patches=patches_count
-        ).reshape((-1, PATCH_SIZE * PATCH_SIZE * 3))
+        patches = extract_patches_2d(image, (config.patch_size, config.patch_size), max_patches=sample_count).reshape(
+            (-1, config.patch_size * config.patch_size * 3))
     else:
-        # calculate strides
+        raise NotImplementedError("Efficient non-random sampling is not implemented")
         # TODO: move strides to config
+        # calculate strides
         stride_y, stride_x = 1, 1
         curr_coverage = 1.0
         iter = 0
@@ -70,13 +71,13 @@ def get_patches(image: np.ndarray, config: GlobalPaletteConfig):
 
         # sliding window
         patches = []
-        for upper_left_y in range(0, height - PATCH_SIZE + 1, stride_y):
-            for upper_left_x in range(0, width - PATCH_SIZE + 1, stride_x):
+        for upper_left_y in range(0, height - config.patch_size + 1, stride_y):
+            for upper_left_x in range(0, width - config.patch_size + 1, stride_x):
                 patch = image[
-                    upper_left_y: upper_left_y + PATCH_SIZE,
-                    upper_left_x: upper_left_x + PATCH_SIZE,
-                    :,
-                ].reshape((PATCH_SIZE * PATCH_SIZE * 3))
+                        upper_left_y: upper_left_y + config.patch_size,
+                        upper_left_x: upper_left_x + config.patch_size,
+                        :,
+                        ].reshape((config.patch_size * config.patch_size * 3))
                 patches.append(patch)
     return np.array(patches)
 
@@ -100,6 +101,7 @@ def histogram(neighbors: np.ndarray, patches_num: int) -> np.ndarray:
     histogram /= patches_num
 
     return histogram
+
 
 def plot_image(x, size):
     plt.figure(figsize=(1.5, 1.5))

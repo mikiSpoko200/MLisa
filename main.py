@@ -1,27 +1,31 @@
 import argparse
 import json
+import itertools
 
 import PIL
+import numpy as np
 from PIL.Image import Image
 from sklearn.neighbors import KNeighborsClassifier
-import numpy as np
 
 import loader
 import match
 import palette
 import utils
-
+import config
 from typing import Iterator
 from config import Config, GlobalPaletteConfig
 
-import tqdm
-import itertools
+# Emulate conditional compilation
+if config.PROFILE:
+    def tqdm(*args, **_): return args[0]
+else:
+    from tqdm import tqdm
 
 
 def feature_batches(features_iterator: loader.BatchLoader) -> Iterator[list[Image]]:
     samples = list()
     samples.clear()
-    for features in tqdm.tqdm(itertools.zip_longest(*features_iterator), desc="class batches"):
+    for features in tqdm(itertools.zip_longest(*features_iterator), desc="class batches"):
         samples.clear()
         samples.extend(itertools.chain.from_iterable(
             (image for image in image_batch if image_batch is not None) for image_batch in features))
@@ -67,7 +71,7 @@ def main():
 
     palettes = [
         palette.generate_palette(image_batch, config.global_palette, verbose=True) for image_batch in
-        tqdm.tqdm(feature_batches(batch_loader), desc=" features")
+        tqdm(feature_batches(batch_loader), desc=" features")
     ]
     global_palette = palette.merge_palettes(palettes, config.global_palette.batching_k_means)
 
@@ -78,11 +82,9 @@ def main():
         avg_histogram = np.zeros((config.global_palette.size,))
         total_patch_count = 0
 
-        # print(f"Processing feature: {feature_batch_iterator.cls}")
-
         # Generate averaged class histogram
-        for image_batch in tqdm.tqdm(feature_batch_iterator, desc=" feature"):
-            for image in tqdm.tqdm(image_batch, desc=" batch"):
+        for image_batch in tqdm(feature_batch_iterator, desc=" feature"):
+            for image in tqdm(image_batch, desc=" batch"):
                 # TODO: image -> np.ndarray should have it's own function,
                 #  and in general structure of this code duplicates -- fix it.
                 (histogram, patches_count) = match.match1(
@@ -100,18 +102,9 @@ def main():
     with PIL.Image.open(f"{config.dataset_path}/Impressionism/claude-monet_water-lilies-6.jpg") as sample:
         print("prediction: ", predict(sample, global_palette, class_histograms, config.global_palette, neighbours))
 
-    # MATCH2
-    # training
-    # for feature_batch_iterator in batch_loader:
-    #     palettes_per_label = dict()
-    #     label = feature_batch_iterator.cls
-    #     print(f"Class: {feature_batch_iterator.cls.replace('_', ' ')}")
-    #     palettes = []
-    #     for index, batch in enumerate(feature_batch_iterator):
-    #         print(f"  Batch {index:>3}: {sum(map(len, batch)) / (1024 * 1024):>7.3f} MB")
-    #         palettes.append(palette.generate_palette(batch, config.global_palette))
-    #     palettes_per_label[label] = palette.merge_palettes(palettes, config.global_palette.batching_k_means)
-
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        pass

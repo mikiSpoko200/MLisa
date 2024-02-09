@@ -17,10 +17,9 @@ def match1(
     """For each patch from `image` find the closest patch from palette and arrange distances into histogram."""
 
     # TODO: this is duplicated in palette
-    # TODO:
     image_array = np.asarray(image, dtype='B').reshape(image.height, image.width, len(image.getbands()))
 
-    patches = get_patches(image_array, config)
+    patches = get_patches(image_array, config, 0.1)
     _, neighbors = k_closest(patches, palette, 1, neigh)
     return histogram(neighbors, patches.shape[0]), len(patches)
 
@@ -28,10 +27,10 @@ def match1(
 def match2(
     image: np.ndarray,
         palette: np.ndarray,
-        config: GlobalPaletteConfig, # TODO: change global palette to local palette (once it's implemented)
+        config: GlobalPaletteConfig,  # TODO: change global palette to local palette (once it's implemented)
         k: int,
         neigh: KNeighborsClassifier | None = None
 ) -> np.ndarray:
-    patches = get_patches(image, config)
+    patches = get_patches(image, config, config.coverage)
 
     return k_closest(patches, palette, k, neigh)

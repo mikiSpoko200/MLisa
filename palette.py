@@ -1,11 +1,19 @@
 import bitmath
 import numpy as np
+import config
+
+from memory_profiler import profile
+
+# Emulate conditional compilation
+if config.PROFILE:
+    def tqdm(*args, **_): return args[0]
+else:
+    from tqdm import tqdm
 from sklearn.cluster import MiniBatchKMeans
-from tqdm import tqdm
-from config import BatchingKMeansConfig, GlobalPaletteConfig
 from PIL.Image import Image
 
 import utils
+from config import BatchingKMeansConfig, GlobalPaletteConfig
 
 
 def contrast(image):
@@ -25,33 +33,39 @@ def whiten(x_list):
     return x_zca
 
 
+MAX_PATCHES_TOTAL_SIZE: int = 1 * 1024 * 1024 * 1024
+
+
+@profile
 def generate_palette(images: list[Image], config: GlobalPaletteConfig, verbose: bool = False, whitening: bool = False):
-    patches = list()
-    print("asdasds")
-    image_arrays = [np.asarray(image, dtype='B').reshape(image.height, image.width, len(image.getbands()))
-                    for image in images]
+    # Preallocate memory for all patches
 
-    # F1 256 |
-    # F2 256 |
-    # F3 256 |
-    # F4 256 |
-    # TOTAL_ITERATION_SIZE = FEATURE_COUNT * PATCH_COUNT
-    total_size = 0
-    if verbose:
-        for i in tqdm(range(len(images)), desc='\rGetting patches'):
-            img_patches = utils.get_patches(image_arrays[i], config)
-            patches.extend(img_patches)
-            total_size += bitmath.Byte(img_patches.size * img_patches.itemsize).to_MiB()
-            print(f"Mem usage: {total_size}")
-    else:
-        for image in image_arrays:
-            img_patches = utils.get_patches(image, config)
-            patches.extend(img_patches)
+    def image_byte_size(image: Image) -> int:
+        return image.height * image.width * len(image.getbands())
 
-    patches_matrix = np.vstack(patches)
+    patch_memory_size = min(MAX_PATCHES_TOTAL_SIZE, sum(map(image_byte_size, images)))
+    patch_count = patch_memory_size // (config.patch_size * config.patch_size * 3)
+
+    patches = np.zeros((patch_count, config.patch_size * config.patch_size * 3))
+                      # TODO: does this copy here?
+    image_generator = (np.asarray(image, dtype='B').reshape(image.height, image.width, len(image.getbands()))
+                       for image in images)
+    # TODO: fragmentation?
+    offset = 0
+    for image in tqdm(image_generator, desc="patches"):
+        if patch_count <= 0:
+            break
+        local_patches = utils.get_patches(image, config, patch_count)
+        local_patch_count = len(local_patches)
+        print(f"Remaining patches: {patch_count}, current patch batch size: {local_patch_count}")
+        patches[offset: offset + local_patch_count] = local_patches
+        del local_patches
+        offset += local_patch_count
+        patch_count -= local_patch_count
+        print(f"Batch size: {bitmath.Byte(local_patch_count * config.patch_size * config.patch_size * 3).to_MiB()}")
 
     if whitening:
-        patches_matrix = whiten(patches_matrix)
+        patches = whiten(patches)
 
     assert config.parent is not None
 
@@ -63,8 +77,7 @@ def generate_palette(images: list[Image], config: GlobalPaletteConfig, verbose: 
             n_init=1,
             max_iter=config.batching_k_means.max_iterations,
             batch_size=config.batching_k_means.batch_size)
-        .fit(patches_matrix))
-
+        .fit(patches))
     # return kmeans.labels_, kmeans.cluster_centers_
     return kmeans.cluster_centers_
 
