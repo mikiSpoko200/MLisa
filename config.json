@@ -3,7 +3,7 @@
     "dataset-path": "./wikiart",
     "dataset-labels-path": "./wikiart-labels",
     "loader": {
-        "batch-size": "256 MiB"
+        "batch-size": "32 MiB"
     },
     "global-palette": {
         "size": 10000,

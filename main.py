@@ -1,10 +1,8 @@
 import argparse
 import json
-import itertools
 
 import PIL
 from PIL.Image import Image
-import tqdm
 from sklearn.neighbors import KNeighborsClassifier
 import numpy as np
 
@@ -17,7 +15,6 @@ from typing import Iterator
 from config import Config, GlobalPaletteConfig
 
 import tqdm
-
 import itertools
 
 
@@ -26,7 +23,8 @@ def feature_batches(features_iterator: loader.BatchLoader) -> Iterator[list[Imag
     samples.clear()
     for features in tqdm.tqdm(itertools.zip_longest(*features_iterator), desc="class batches"):
         samples.clear()
-        samples.extend(itertools.chain.from_iterable((image for image in image_batch if image_batch is not None) for image_batch in features))
+        samples.extend(itertools.chain.from_iterable(
+            (image for image in image_batch if image_batch is not None) for image_batch in features))
         yield samples
 
 

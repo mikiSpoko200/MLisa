@@ -1,3 +1,4 @@
+import bitmath
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 from tqdm import tqdm
@@ -25,15 +26,23 @@ def whiten(x_list):
 
 
 def generate_palette(images: list[Image], config: GlobalPaletteConfig, verbose: bool = False, whitening: bool = False):
-    patches = []
+    patches = list()
     print("asdasds")
-    image_arrays = [np.array(image.tobytes(), dtype='B').reshape(image.height, image.width, len(image.getbands()))
+    image_arrays = [np.asarray(image, dtype='B').reshape(image.height, image.width, len(image.getbands()))
                     for image in images]
 
+    # F1 256 |
+    # F2 256 |
+    # F3 256 |
+    # F4 256 |
+    # TOTAL_ITERATION_SIZE = FEATURE_COUNT * PATCH_COUNT
+    total_size = 0
     if verbose:
-        for i in tqdm(range(len(images)), desc='Getting patches'):
+        for i in tqdm(range(len(images)), desc='\rGetting patches'):
             img_patches = utils.get_patches(image_arrays[i], config)
             patches.extend(img_patches)
+            total_size += bitmath.Byte(img_patches.size * img_patches.itemsize).to_MiB()
+            print(f"Mem usage: {total_size}")
     else:
         for image in image_arrays:
             img_patches = utils.get_patches(image, config)

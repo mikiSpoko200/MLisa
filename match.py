@@ -17,7 +17,8 @@ def match1(
     """For each patch from `image` find the closest patch from palette and arrange distances into histogram."""
 
     # TODO: this is duplicated in palette
-    image_array = np.array(image.tobytes(), dtype='B').reshape(image.height, image.width, len(image.getbands()))
+    # TODO:
+    image_array = np.asarray(image, dtype='B').reshape(image.height, image.width, len(image.getbands()))
 
     patches = get_patches(image_array, config)
     _, neighbors = k_closest(patches, palette, 1, neigh)
