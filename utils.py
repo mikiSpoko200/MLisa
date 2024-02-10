@@ -1,11 +1,14 @@
 import enum
 
+import bitmath
 import matplotlib as plt
 import numpy as np
 
 from PIL import Image
 from sklearn.feature_extraction.image import extract_patches_2d
 from sklearn.neighbors import KNeighborsClassifier
+
+from config import GlobalPaletteConfig
 
 
 class ClassificationTarget(enum.Enum):
@@ -15,7 +18,8 @@ class ClassificationTarget(enum.Enum):
     STYLE = enum.auto()
 
 
-PATCH_SIZE = 3  # patches PATCH_SIZE x PATCH_SIZE
+# TODO: move this to "*-palette" configurations
+PATCH_SIZE: int = 16  # patches PATCH_SIZE x PATCH_SIZE
 
 BASIC_COLORS = np.array(
     [
@@ -40,24 +44,26 @@ def read_image(path):
     return image
 
 
-def get_patches(image: np.ndarray, coverage: float, random: bool):
+def get_patches(image: np.ndarray, config: GlobalPaletteConfig, max_patch_count: int | float):
     height, width = image.shape[0], image.shape[1]
-    assert height >= PATCH_SIZE and width >= PATCH_SIZE
+    assert height >= config.patch_size and width >= config.patch_size
 
-    if random:
-        patches_count = int(
-            coverage * (height - PATCH_SIZE + 1) * (width - PATCH_SIZE + 1)
-        )
-        patches = extract_patches_2d(
-            image, (PATCH_SIZE, PATCH_SIZE), max_patches=patches_count
-        ).reshape((-1, PATCH_SIZE * PATCH_SIZE * 3))
+    # FIXME: should this use min?
+    sample_count = int(
+        min(config.coverage * (height - config.patch_size + 1) * (width - config.patch_size + 1), max_patch_count)
+    ) if type(max_patch_count) is int else max_patch_count
+    if config.random:
+        patches = extract_patches_2d(image, (config.patch_size, config.patch_size), max_patches=sample_count).reshape(
+            (-1, config.patch_size * config.patch_size * 3))
     else:
+        raise NotImplementedError("Efficient non-random sampling is not implemented")
+        # TODO: move strides to config
         # calculate strides
         stride_y, stride_x = 1, 1
         curr_coverage = 1.0
         iter = 0
-        while curr_coverage > coverage:
-            coverage = 1.0 / (stride_x * stride_y)
+        while curr_coverage > config.coverage:
+            curr_coverage = 1.0 / (stride_x * stride_y)
             if iter % 2 == 0:
                 stride_y += 1
             else:
@@ -65,33 +71,37 @@ def get_patches(image: np.ndarray, coverage: float, random: bool):
 
         # sliding window
         patches = []
-        for upper_left_y in range(0, height - PATCH_SIZE + 1, stride_y):
-            for upper_left_x in range(0, width - PATCH_SIZE + 1, stride_x):
+        for upper_left_y in range(0, height - config.patch_size + 1, stride_y):
+            for upper_left_x in range(0, width - config.patch_size + 1, stride_x):
                 patch = image[
-                    upper_left_y : upper_left_y + PATCH_SIZE,
-                    upper_left_x : upper_left_x + PATCH_SIZE,
-                    :,
-                ].reshape((PATCH_SIZE * PATCH_SIZE * 3))
+                        upper_left_y: upper_left_y + config.patch_size,
+                        upper_left_x: upper_left_x + config.patch_size,
+                        :,
+                        ].reshape((config.patch_size * config.patch_size * 3))
                 patches.append(patch)
     return np.array(patches)
 
 
-def k_closest(patches: np.ndarray, palette: np.ndarray, k: int):
+def k_closest(patches: np.ndarray, palette: np.ndarray, k: int, neigh: KNeighborsClassifier | None = None):
     # TODO: run with n_jobs? - to test
-    neigh = KNeighborsClassifier(n_neighbors=k)
-    neigh.fit(palette, np.arange(palette.shape[0]))
+    if neigh is not None:
+        neigh = KNeighborsClassifier(n_neighbors=k)
+        neigh.fit(palette, np.arange(palette.shape[0]))
     closest = neigh.kneighbors(patches)
 
     return closest
 
 
-def histogram(neighbors: np.ndarray, patches_num: int):
+def histogram(neighbors: np.ndarray, patches_num: int) -> np.ndarray:
     neighbors = neighbors.flatten()
+    hist = np.zeros((neighbors.shape[0],))
+    hist[neighbors] += 1
     _, histogram = np.unique(neighbors, return_counts=True)
     histogram = histogram.astype("float64")
     histogram /= patches_num
 
     return histogram
+
 
 def plot_image(x, size):
     plt.figure(figsize=(1.5, 1.5))

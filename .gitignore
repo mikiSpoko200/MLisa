@@ -160,6 +160,8 @@ cython_debug/
 #.idea/
 
 /wikiart-dataset
+/wikiart
+/wikiart - Copy
 *.csv
 *class.txt
 

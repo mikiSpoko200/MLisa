@@ -1,5 +1,7 @@
-numpy
-pillow
-pandas
-matplotlib
-scikit-learn
+numpy~=1.26.3
+pillow~=10.2.0
+pandas~=2.2.0
+matplotlib~=3.8.2
+scikit-learn~=1.4.0
+tqdm~=4.66.1
+bitmath~=1.3.3.1
