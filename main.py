@@ -57,77 +57,79 @@ def predict1(
     return min(difference, key=difference.get)
 
 
-def method1(batch_loader: loader.BatchLoader, loader_params: list, config: Config, pickling: bool = True):
+def method1(batch_loader: loader.BatchLoader, loader_params: list, config: Config, pickling: bool = True, loading: bool = False):
     # CREATING GLOBAL PALETTE
     palettes = list()
     if pickling:
         palettes_dir = os.path.join(os.path.dirname(__file__), "palettes")
         histograms_dir = os.path.join(os.path.dirname(__file__), "histograms")
-        os.makedirs(palettes_dir, exist_ok=True)
-        os.makedirs(histograms_dir, exist_ok=True)
+        if not os.path.exists(palettes_dir):
+            os.makedirs(palettes_dir, exist_ok=True)
+        if not os.path.exists(palettes_dir):
+            os.makedirs(histograms_dir, exist_ok=True)
         
-    for idx, image_batch in enumerate(tqdm(feature_batches(batch_loader), desc=" features")):
-        curr_palette = palette.generate_palette(image_batch, config.global_palette, verbose=True)
-        palettes.append(curr_palette)
-        print(f"Generated palette nr {idx}")
+    if not loading:
+        for idx, image_batch in enumerate(tqdm(feature_batches(batch_loader), desc=" features")):
+            curr_palette = palette.generate_palette(image_batch, config.global_palette, verbose=True)
+            palettes.append(curr_palette)
+            print(f"Generated palette nr {idx}")
 
+            if pickling:
+                pickle.dump(curr_palette, open(os.path.join(palettes_dir, f"palette{idx}"), "wb"))
+
+        global_palette = palette.merge_palettes(palettes, config.global_palette.batching_k_means)
         if pickling:
-            pickle.dump(curr_palette, open(os.path.join(palettes_dir, f"palette{idx}"), "wb"))
-
-    # for file in os.listdir(palettes_dir):
-    #     palettes.append(pickle.load(open(os.path.join(palettes_dir, file), "rb")))
-
-    global_palette = palette.merge_palettes(palettes, config.global_palette.batching_k_means)
-    if pickling:
-        pickle.dump(global_palette, open(os.path.join(os.path.dirname(__file__), "global_palette"), "wb"))
-
-    # global_palette = pickle.load(global_palette, open(os.path.join(os.path.dirname(__file__), "global_palette"), "rb"))
+            pickle.dump(global_palette, open(os.path.join(os.path.dirname(__file__), "global_palette"), "wb"))
+    else:
+        global_palette = pickle.load(global_palette, open(os.path.join(os.path.dirname(__file__), "global_palette"), "rb"))
 
     # CALCULATING AVERAGE CLASS HISTOGRAMS
     neighbours = KNeighborsClassifier(n_neighbors=1).fit(global_palette, np.arange(global_palette.shape[0]))
 
-    class_histograms = dict()
-    for feature_batch_iterator in loader.BatchLoader(*loader_params):
-        avg_histogram = np.zeros((config.global_palette.size,))
-        total_patch_count = 0
+    if not loading:
+        class_histograms = dict()
+        for feature_batch_iterator in loader.BatchLoader(*loader_params):
+            avg_histogram = np.zeros((config.global_palette.size,))
+            total_patch_count = 0
 
-        # Generate averaged class histogram
-        for image_batch in tqdm(feature_batch_iterator, desc=" feature"):
-            print(feature_batch_iterator.cls)
-            for image in tqdm(image_batch, desc=" batch"):
-                # TODO: image -> np.ndarray should have it's own function,
-                #  and in general structure of this code duplicates -- fix it.
-                (histogram, patches_count) = match.match1(
-                    # TODO: image dimensions are hard coded here
-                    image,
-                    global_palette,
-                    config.global_palette,
-                    neighbours
-                )
-                total_patch_count += patches_count
-                avg_histogram += histogram
-                print(image)
-        avg_histogram /= total_patch_count
-        class_histograms[feature_batch_iterator.cls] = avg_histogram
+            # Generate averaged class histogram
+            for image_batch in tqdm(feature_batch_iterator, desc=" feature"):
+                print(feature_batch_iterator.cls)
+                for image in tqdm(image_batch, desc=" batch"):
+                    # TODO: image -> np.ndarray should have it's own function,
+                    #  and in general structure of this code duplicates -- fix it.
+                    (histogram, patches_count) = match.match1(
+                        # TODO: image dimensions are hard coded here
+                        image,
+                        global_palette,
+                        config.global_palette,
+                        neighbours
+                    )
+                    total_patch_count += patches_count
+                    avg_histogram += histogram
+                    print(image)
+            avg_histogram /= total_patch_count
+            class_histograms[feature_batch_iterator.cls] = avg_histogram
+            if pickling:
+                pickle.dump(avg_histogram, open(os.path.join(histograms_dir, f"{feature_batch_iterator.cls}"), "wb"))
+
         if pickling:
-            pickle.dump(avg_histogram, open(os.path.join(histograms_dir, f"{feature_batch_iterator.cls}"), "wb"))
-
-    if pickling:
-        pickle.dump(class_histograms, open(os.path.join(os.path.dirname(__file__), "class_histograms"), "wb"))
-
-    # class_histograms = pickle.load(open(os.path.join(os.path.dirname(__file__), "class_histograms"), "rb"))
+            pickle.dump(class_histograms, open(os.path.join(os.path.dirname(__file__), "class_histograms"), "wb"))
+    else:
+        class_histograms = pickle.load(open(os.path.join(os.path.dirname(__file__), "class_histograms"), "rb"))
 
     # VALIDATION
     batch_loader.cls_encoding(TARGET, config)
     val_entries = pd.read_csv(os.path.join(config.dataset_labels_path, f"{batch_loader.target.name.lower()}_val.csv"), names=["path", "encoded_cls"])
 
     correct, all_entries = 0, 0
+    class_encoding = batch_loader.cls_encoding(TARGET, config)
     for _, entry in val_entries.iterrows():
         try:
             with PIL.Image.open(os.path.join(config.dataset_path, entry['path'])) as sample:
                 prediction = predict1(sample, global_palette, class_histograms, config.global_palette, neighbours)
                 print("prediction: ", prediction)
-                correct += (prediction == batch_loader.cls_encoding(entry['encoded_cls']))
+                correct += (prediction == class_encoding[entry["encoded_cls"]])
                 all_entries += 1
         except FileNotFoundError:
             continue
@@ -148,45 +150,51 @@ def predict2(
 
     # TODO: how to pick closest class? minimum sum of distances for now
     sums = {cls : np.sum(matches[cls][0]) for cls in matches.keys()}
-    
     return min(sums, key=sums.get)
 
-def method2(batch_loader: loader.BatchLoader, config: Config, pickling: bool = True):
+def method2(batch_loader: loader.BatchLoader, config: Config, pickling: bool = True, loading: bool = False):
     # GENERATING LOCAL (CLASS) PALETTES
     local_palettes = dict()
     neighbours = dict()
     if pickling:
         palettes_dir = os.path.join(os.path.dirname(__file__), "local_palettes")
-        os.makedirs(palettes_dir, exist_ok=True)
+        if not os.path.exists(palettes_dir):
+            os.makedirs(palettes_dir, exist_ok=True)
+
+    if loading:
+        local_palettes = pickle.load(open(os.path.join(os.path.dirname(__file__), "local_palettes"), "rb"))
 
     for feature_batch_iterator in batch_loader:
         cls = feature_batch_iterator.cls
-        palettes = list()
-        for idx, image_batch in enumerate(tqdm(feature_batch_iterator, desc=" feature")):
-            palettes.append(palette.generate_palette(image_batch, config.local_palette))
-            print(f"Generated palette nr {idx}")
+        print(cls)
+        if not loading:
+            palettes = list()
+            for idx, image_batch in enumerate(tqdm(feature_batch_iterator, desc=" feature")):
+                palettes.append(palette.generate_palette(image_batch, config.local_palette))
+                print(f"Generated palette nr {idx}")
 
-        local_palette = palette.merge_palettes(palettes, config.local_palette.batching_k_means)
-        local_palettes[cls] = local_palette
-        neighbours[cls] = KNeighborsClassifier(n_neighbors=1).fit(local_palette, np.arange(local_palette.shape[0]))
+            local_palette = palette.merge_palettes(palettes, config.local_palette.batching_k_means)
+            local_palettes[cls] = local_palette
+        neighbours[cls] = KNeighborsClassifier(n_neighbors=1).fit(local_palettes[cls], np.arange(local_palettes[cls].shape[0]))
 
         if pickling:
-            pickle.dump(local_palette, open(os.path.join(palettes_dir, f"{cls}"), "wb"))
+            pickle.dump(local_palettes[cls], open(os.path.join(palettes_dir, f"{cls}"), "wb"))
     
     if pickling:
-        pickle.dump(local_palettes, open(os.path.join(os.path.dirname(__file__), "global_palette"), "wb"))
+        pickle.dump(local_palettes, open(os.path.join(os.path.dirname(__file__), "local_palettes"), "wb"))
 
     # VALIDATION
     batch_loader.cls_encoding(TARGET, config)
     val_entries = pd.read_csv(os.path.join(config.dataset_labels_path, f"{batch_loader.target.name.lower()}_val.csv"), names=["path", "encoded_cls"])
 
     correct, all_entries = 0, 0
+    class_encoding = batch_loader.cls_encoding(TARGET, config)
     for _, entry in val_entries.iterrows():
         try:
             with PIL.Image.open(os.path.join(config.dataset_path, entry['path'])) as sample:
                 prediction = predict2(sample, local_palettes, config.local_palette, neighbours)
                 print("prediction: ", prediction)
-                correct += (prediction == batch_loader.cls_encoding(entry['encoded_cls']))
+                correct += (prediction == class_encoding[entry["encoded_cls"]])
                 all_entries += 1
         except FileNotFoundError:
             continue
