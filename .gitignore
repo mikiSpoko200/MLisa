@@ -163,5 +163,6 @@ cython_debug/
 /wikiart
 *.csv
 *class.txt
+*.prof
 
 .vscode/
