@@ -8,7 +8,7 @@ from PIL import Image
 from sklearn.feature_extraction.image import extract_patches_2d
 from sklearn.neighbors import KNeighborsClassifier
 
-from config import GlobalPaletteConfig
+import config
 
 
 class ClassificationTarget(enum.Enum):
@@ -44,7 +44,7 @@ def read_image(path):
     return image
 
 
-def get_patches(image: np.ndarray, config: GlobalPaletteConfig, max_patch_count: int | float):
+def get_patches(image: np.ndarray, config: config.GlobalPaletteConfig, max_patch_count: int | float):
     height, width = image.shape[0], image.shape[1]
     assert height >= config.patch_size and width >= config.patch_size
 
@@ -92,15 +92,16 @@ def k_closest(patches: np.ndarray, palette: np.ndarray, k: int, neigh: KNeighbor
     return closest
 
 
-def histogram(neighbors: np.ndarray, patches_num: int) -> np.ndarray:
+def histogram(neighbors: np.ndarray, palette_size: int) -> np.ndarray:
     neighbors = neighbors.flatten()
-    hist = np.zeros((neighbors.shape[0],))
+    hist = np.zeros((palette_size,))
     hist[neighbors] += 1
-    _, histogram = np.unique(neighbors, return_counts=True)
-    histogram = histogram.astype("float64")
-    histogram /= patches_num
+    # _, histogram = np.unique(neighbors, return_counts=True)
+    # histogram = histogram.astype("float64")
+    # histogram /= patches_num
 
-    return histogram
+    # return histogram
+    return hist
 
 
 def plot_image(x, size):

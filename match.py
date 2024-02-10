@@ -21,7 +21,7 @@ def match1(
 
     patches = get_patches(image_array, config, 0.1)
     _, neighbors = k_closest(patches, palette, 1, neigh)
-    return histogram(neighbors, patches.shape[0]), len(patches)
+    return histogram(neighbors, palette.shape[0]), len(patches)
 
 
 def match2(

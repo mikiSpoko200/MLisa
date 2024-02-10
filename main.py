@@ -73,15 +73,15 @@ def main():
     batch_loader = loader.BatchLoader(*loader_params)
 
     palettes = list()
-    # for idx, image_batch in enumerate(tqdm(feature_batches(batch_loader), desc=" features")):
-    #     curr_palette = palette.generate_palette(image_batch, config.global_palette, verbose=True)
-    #     palettes.append(curr_palette)
-    #     pickle.dump(curr_palette, open(os.path.join(os.path.dirname(__file__), f"palettes\\palette{idx}"), "wb"))
+    for idx, image_batch in enumerate(tqdm(feature_batches(batch_loader), desc=" features")):
+        curr_palette = palette.generate_palette(image_batch, config.global_palette, verbose=True)
+        palettes.append(curr_palette)
+        pickle.dump(curr_palette, open(os.path.join(os.path.dirname(__file__), f"palettes\\palette{idx}"), "wb"))
 
-    # palettes = [
-    #     palette.generate_palette(image_batch, config.global_palette, verbose=True) for image_batch in
-    #     tqdm(feature_batches(batch_loader), desc=" features")
-    # ]
+    palettes = [
+        palette.generate_palette(image_batch, config.global_palette, verbose=True) for image_batch in
+        tqdm(feature_batches(batch_loader), desc=" features")
+    ]
 
     palettes_dir = os.path.join(os.path.dirname(__file__), "palettes")
     for file in os.listdir(palettes_dir):
@@ -91,34 +91,34 @@ def main():
 
     neighbours = KNeighborsClassifier(n_neighbors=1).fit(global_palette, np.arange(global_palette.shape[0]))
 
-    # class_histograms = dict()
-    # for feature_batch_iterator in loader.BatchLoader(*loader_params):
-    #     avg_histogram = np.zeros((config.global_palette.size,))
-    #     total_patch_count = 0
+    class_histograms = dict()
+    for feature_batch_iterator in loader.BatchLoader(*loader_params):
+        avg_histogram = np.zeros((config.global_palette.size,))
+        total_patch_count = 0
 
-    #     # Generate averaged class histogram
-    #     for image_batch in tqdm(feature_batch_iterator, desc=" feature"):
-    #         print(feature_batch_iterator.cls)
-    #         for image in tqdm(image_batch, desc=" batch"):
-    #             # TODO: image -> np.ndarray should have it's own function,
-    #             #  and in general structure of this code duplicates -- fix it.
-    #             (histogram, patches_count) = match.match1(
-    #                 # TODO: image dimensions are hard coded here
-    #                 image,
-    #                 global_palette,
-    #                 config.global_palette,
-    #                 neighbours
-    #             )
-    #             total_patch_count += patches_count
-    #             avg_histogram += histogram
-    #             print(image)
-    #     avg_histogram /= total_patch_count
-    #     class_histograms[feature_batch_iterator.cls] = avg_histogram
-    #     pickle.dump(avg_histogram, open(os.path.join(os.path.dirname(__file__), f"histograms\\{feature_batch_iterator.cls}"), "wb"))
+        # Generate averaged class histogram
+        for image_batch in tqdm(feature_batch_iterator, desc=" feature"):
+            print(feature_batch_iterator.cls)
+            for image in tqdm(image_batch, desc=" batch"):
+                # TODO: image -> np.ndarray should have it's own function,
+                #  and in general structure of this code duplicates -- fix it.
+                (histogram, patches_count) = match.match1(
+                    # TODO: image dimensions are hard coded here
+                    image,
+                    global_palette,
+                    config.global_palette,
+                    neighbours
+                )
+                total_patch_count += patches_count
+                avg_histogram += histogram
+                print(image)
+        avg_histogram /= total_patch_count
+        class_histograms[feature_batch_iterator.cls] = avg_histogram
+        pickle.dump(avg_histogram, open(os.path.join(os.path.dirname(__file__), f"histograms\\{feature_batch_iterator.cls}"), "wb"))
 
-    # pickle.dump(class_histograms, open(os.path.join(os.path.dirname(__file__), "class_histograms"), "wb"))
+    pickle.dump(class_histograms, open(os.path.join(os.path.dirname(__file__), "class_histograms"), "wb"))
 
-    class_histograms = pickle.load(open(os.path.join(os.path.dirname(__file__), "class_histograms"), "rb"))
+    # class_histograms = pickle.load(open(os.path.join(os.path.dirname(__file__), "class_histograms"), "rb"))
 
     batch_loader.cls_encoding(utils.ClassificationTarget.STYLE, config)
     val_entries = pd.read_csv(os.path.join(config.dataset_labels_path, f"{batch_loader.target.name.lower()}_val.csv"), names=["path", "encoded_cls"])

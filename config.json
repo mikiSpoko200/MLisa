@@ -7,7 +7,7 @@
     },
     "global-palette": {
         "size": 1000,
-        "patch-size": 16,
+        "patch-size": 1,
         "coverage": 0.01,
         "random": true,
         "batching-k-means": {
