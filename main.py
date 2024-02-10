@@ -18,7 +18,7 @@ import palette
 import utils
 import config
 from typing import Iterator
-from config import Config, GlobalPaletteConfig
+from config import Config, GlobalPaletteConfig, LocalPaletteConfig
 
 # Emulate conditional compilation
 if config.PROFILE:
@@ -39,9 +39,10 @@ def feature_batches(features_iterator: loader.BatchLoader) -> Iterator[list[Imag
 
 
 Class = str
+TARGET = utils.ClassificationTarget.STYLE
 
 
-def predict(
+def predict1(
         image: Image,
         global_palette: np.ndarray,
         class_histograms: dict[Class, np.ndarray],
@@ -56,43 +57,33 @@ def predict(
     return min(difference, key=difference.get)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Process some integers.")
-    parser.add_argument("--config", type=str, default="./config.json", help="Path to the configuration file")
-    parser.add_argument("--dataset-path", type=str, help="Override path to the dataset specified in --config")
-    parser.add_argument("--dataset-labels-path", type=str,
-                        help="Override path to the dataset labels specified in --config")
-    parser.add_argument("--batch-size", nargs=2, type=str,
-                        help="Override batch size for the loader specified in --config. Format: <value> <unit> (e.g. 256 MiB)")
-
-    args = parser.parse_args()
-
-    with open(args.config, "r") as config_file:
-        config_json = json.load(config_file)
-
-    config = Config.from_json(config_json)
-
-    loader_params = [utils.ClassificationTarget.STYLE, config]
-    batch_loader = loader.BatchLoader(*loader_params)
-
+def method1(batch_loader: loader.BatchLoader, loader_params: list, config: Config, pickling: bool = True):
+    # CREATING GLOBAL PALETTE
     palettes = list()
+    if pickling:
+        palettes_dir = os.path.join(os.path.dirname(__file__), "palettes")
+        histograms_dir = os.path.join(os.path.dirname(__file__), "histograms")
+        os.makedirs(palettes_dir, exist_ok=True)
+        os.makedirs(histograms_dir, exist_ok=True)
+        
     for idx, image_batch in enumerate(tqdm(feature_batches(batch_loader), desc=" features")):
         curr_palette = palette.generate_palette(image_batch, config.global_palette, verbose=True)
         palettes.append(curr_palette)
-        pickle.dump(curr_palette, open(os.path.join(os.path.dirname(__file__), f"palettes\\palette{idx}"), "wb"))
+        print(f"Generated palette nr {idx}")
 
-    global_palette = palette.merge_palettes(palettes, config.global_palette.batching_k_means)
-    pickle.dump(global_palette, open(os.path.join(os.path.dirname(__file__), "global_palette"), "wb"))
+        if pickling:
+            pickle.dump(curr_palette, open(os.path.join(palettes_dir, f"palette{idx}"), "wb"))
 
-    # palettes = [
-    #     palette.generate_palette(image_batch, config.global_palette, verbose=True) for image_batch in
-    #     tqdm(feature_batches(batch_loader), desc=" features")
-    # ]
-
-    # palettes_dir = os.path.join(os.path.dirname(__file__), "palettes")
     # for file in os.listdir(palettes_dir):
     #     palettes.append(pickle.load(open(os.path.join(palettes_dir, file), "rb")))
 
+    global_palette = palette.merge_palettes(palettes, config.global_palette.batching_k_means)
+    if pickling:
+        pickle.dump(global_palette, open(os.path.join(os.path.dirname(__file__), "global_palette"), "wb"))
+
+    # global_palette = pickle.load(global_palette, open(os.path.join(os.path.dirname(__file__), "global_palette"), "rb"))
+
+    # CALCULATING AVERAGE CLASS HISTOGRAMS
     neighbours = KNeighborsClassifier(n_neighbors=1).fit(global_palette, np.arange(global_palette.shape[0]))
 
     class_histograms = dict()
@@ -118,32 +109,110 @@ def main():
                 print(image)
         avg_histogram /= total_patch_count
         class_histograms[feature_batch_iterator.cls] = avg_histogram
-        pickle.dump(avg_histogram, open(os.path.join(os.path.dirname(__file__), f"histograms\\{feature_batch_iterator.cls}"), "wb"))
+        if pickling:
+            pickle.dump(avg_histogram, open(os.path.join(histograms_dir, f"{feature_batch_iterator.cls}"), "wb"))
 
-    pickle.dump(class_histograms, open(os.path.join(os.path.dirname(__file__), "class_histograms"), "wb"))
+    if pickling:
+        pickle.dump(class_histograms, open(os.path.join(os.path.dirname(__file__), "class_histograms"), "wb"))
 
     # class_histograms = pickle.load(open(os.path.join(os.path.dirname(__file__), "class_histograms"), "rb"))
 
     # VALIDATION
-    batch_loader.cls_encoding(utils.ClassificationTarget.STYLE, config)
+    batch_loader.cls_encoding(TARGET, config)
     val_entries = pd.read_csv(os.path.join(config.dataset_labels_path, f"{batch_loader.target.name.lower()}_val.csv"), names=["path", "encoded_cls"])
 
-    correct = 0
+    correct, all_entries = 0, 0
     for _, entry in val_entries.iterrows():
         try:
             with PIL.Image.open(os.path.join(config.dataset_path, entry['path'])) as sample:
-                prediction = predict(sample, global_palette, class_histograms, config.global_palette, neighbours)
+                prediction = predict1(sample, global_palette, class_histograms, config.global_palette, neighbours)
                 print("prediction: ", prediction)
-                correct += (prediction == entry['encoded_cls'])
+                correct += (prediction == batch_loader.cls_encoding(entry['encoded_cls']))
+                all_entries += 1
         except FileNotFoundError:
             continue
-    # print(correct / len(entry['encoded_cls']))
+    print(correct / all_entries)
 
-    # NOTE: this is temporary
-    # with PIL.Image.open(f"{config.dataset_path}/Impressionism/claude-monet_water-lilies-6.jpg") as sample:
-    #     print("prediction: ", predict(sample, global_palette, class_histograms, config.global_palette, neighbours))
 
-    # TODO: match2
+def predict2(
+    image: Image,
+    local_palettes: dict[Class, np.ndarray],
+    config: LocalPaletteConfig,
+    neighbours: dict[Class, KNeighborsClassifier],
+):
+    matches = dict()
+
+    for cls, cls_palette in local_palettes.items():
+        cls_match = match.match2(image, cls_palette, config, neighbours[cls])
+        matches[cls] = cls_match
+
+    # TODO: how to pick closest class? minimum sum of distances for now
+    sums = {cls : np.sum(matches[cls][0]) for cls in matches.keys()}
+    
+    return min(sums, key=sums.get)
+
+def method2(batch_loader: loader.BatchLoader, config: Config, pickling: bool = True):
+    # GENERATING LOCAL (CLASS) PALETTES
+    local_palettes = dict()
+    neighbours = dict()
+    if pickling:
+        palettes_dir = os.path.join(os.path.dirname(__file__), "local_palettes")
+
+    for feature_batch_iterator in batch_loader:
+        cls = feature_batch_iterator.cls
+        palettes = list()
+        for image_batch in tqdm(feature_batch_iterator, desc=" feature"):
+            palettes.append(palette.generate_palette(image_batch, config.local_palette, verbose=True))
+        
+        local_palette = palette.merge_palettes(palettes, config.local_palette.batching_k_means)
+        local_palettes[cls] = local_palette
+        neighbours[cls] = KNeighborsClassifier(n_neighbors=1).fit(local_palette, np.arange(local_palette.shape[0]))
+
+        if pickling:
+            pickle.dump(local_palette, open(os.path.join(palettes_dir, f"{cls}"), "wb"))
+    
+    if pickling:
+        pickle.dump(local_palettes, open(os.path.join(os.path.dirname(__file__), "global_palette"), "wb"))
+
+    # VALIDATION
+    batch_loader.cls_encoding(TARGET, config)
+    val_entries = pd.read_csv(os.path.join(config.dataset_labels_path, f"{batch_loader.target.name.lower()}_val.csv"), names=["path", "encoded_cls"])
+
+    correct, all_entries = 0, 0
+    for _, entry in val_entries.iterrows():
+        try:
+            with PIL.Image.open(os.path.join(config.dataset_path, entry['path'])) as sample:
+                prediction = predict2(sample, local_palettes, config.local_palette, neighbours)
+                print("prediction: ", prediction)
+                correct += (prediction == batch_loader.cls_encoding(entry['encoded_cls']))
+                all_entries += 1
+        except FileNotFoundError:
+            continue
+    print(correct / all_entries)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Process some integers.")
+    parser.add_argument("--config", type=str, default="./config.json", help="Path to the configuration file")
+    parser.add_argument("--dataset-path", type=str, help="Override path to the dataset specified in --config")
+    parser.add_argument("--dataset-labels-path", type=str,
+                        help="Override path to the dataset labels specified in --config")
+    parser.add_argument("--batch-size", nargs=2, type=str,
+                        help="Override batch size for the loader specified in --config. Format: <value> <unit> (e.g. 256 MiB)")
+
+    args = parser.parse_args()
+
+    with open(args.config, "r") as config_file:
+        config_json = json.load(config_file)
+
+    config = Config.from_json(config_json)
+
+    loader_params = [TARGET, config]
+    batch_loader = loader.BatchLoader(*loader_params)
+
+    # method1(batch_loader, loader_params, config)
+
+    method2(batch_loader, config)
 
 if __name__ == "__main__":
     try:

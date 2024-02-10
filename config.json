@@ -1,23 +1,31 @@
 {
     "random-seed": 0,
-    "dataset-path": "../wikiart-compressed-256",
+    "dataset-path": "./wikiart - Copy",
     "dataset-labels-path": "./wikiart-labels",
     "loader": {
         "batch-size": "32 MiB"
     },
     "global-palette": {
-        "size": 10000,
-        "patch-size": 16,
+        "size": 1000,
+        "patch-size": 1,
         "coverage": 0.01,
         "random": true,
         "batching-k-means": {
-            "batch-size": 1000,
+            "batch-size": 100,
             "max-iterations": 20,
-            "number-of-clusters": 10000
+            "number-of-clusters": 1000
         }
     },
     "local-palette": {
         "size": 128,
-        "patch-size": 16
+        "patch-size": 1,
+        "k-neigh": 3,
+        "coverage": 0.01,
+        "random": true,
+        "batching-k-means": {
+            "batch-size": 100,
+            "max-iterations": 20,
+            "number-of-clusters": 128
+        }
     }
 }

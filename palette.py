@@ -13,7 +13,7 @@ from sklearn.cluster import MiniBatchKMeans
 from PIL.Image import Image
 
 import utils
-from config import BatchingKMeansConfig, GlobalPaletteConfig
+from config import BatchingKMeansConfig, GlobalPaletteConfig, LocalPaletteConfig
 
 
 def contrast(image):
@@ -36,7 +36,7 @@ def whiten(x_list):
 MAX_PATCHES_TOTAL_SIZE: int = 1 * 1024 * 1024 * 1024
 
 
-def generate_palette(images: list[Image], config: GlobalPaletteConfig, verbose: bool = False, whitening: bool = False):
+def generate_palette(images: list[Image], config: GlobalPaletteConfig | LocalPaletteConfig, verbose: bool = False, whitening: bool = False):
     # Preallocate memory for all patches
 
     def image_byte_size(image: Image) -> int:

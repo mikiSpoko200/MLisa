@@ -1,5 +1,6 @@
 from match import *
 from palette import generate_global_palette
+from utils import read_image
 
 # TODO: test on a folder/whole dataset
 path = "D:/wikiart/Abstract_Expressionism/mark-tobey_untitled-2.jpg"

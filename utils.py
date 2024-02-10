@@ -17,10 +17,6 @@ class ClassificationTarget(enum.Enum):
     GENRE = enum.auto()
     STYLE = enum.auto()
 
-
-# TODO: move this to "*-palette" configurations
-PATCH_SIZE: int = 16  # patches PATCH_SIZE x PATCH_SIZE
-
 BASIC_COLORS = np.array(
     [
         [255, 0, 0],
@@ -44,7 +40,7 @@ def read_image(path):
     return image
 
 
-def get_patches(image: np.ndarray, config: config.GlobalPaletteConfig, max_patch_count: int | float):
+def get_patches(image: np.ndarray, config: config.GlobalPaletteConfig | config.LocalPaletteConfig, max_patch_count: int | float):
     height, width = image.shape[0], image.shape[1]
     assert height >= config.patch_size and width >= config.patch_size
 

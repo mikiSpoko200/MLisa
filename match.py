@@ -3,7 +3,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from typing import Tuple
 
 import numpy as np
-from config import GlobalPaletteConfig
+from config import GlobalPaletteConfig, LocalPaletteConfig
 
 from PIL.Image import Image
 
@@ -19,7 +19,7 @@ def match1(
     # TODO: this is duplicated in palette
     image_array = np.asarray(image, dtype='B').reshape(image.height, image.width, len(image.getbands()))
 
-    patches = get_patches(image_array, config, 0.1)
+    patches = get_patches(image_array, config, config.coverage)
     _, neighbors = k_closest(patches, palette, 1, neigh)
     return histogram(neighbors, palette.shape[0]), len(patches)
 
@@ -27,10 +27,9 @@ def match1(
 def match2(
     image: np.ndarray,
         palette: np.ndarray,
-        config: GlobalPaletteConfig,  # TODO: change global palette to local palette (once it's implemented)
-        k: int,
+        config: LocalPaletteConfig,
         neigh: KNeighborsClassifier | None = None
 ) -> np.ndarray:
     patches = get_patches(image, config, config.coverage)
 
-    return k_closest(patches, palette, k, neigh)
+    return k_closest(patches, palette, config.k_neigh, neigh)
