@@ -157,7 +157,7 @@ def method2(batch_loader: loader.BatchLoader, config: Config, pickling: bool = T
     local_palettes = dict()
     neighbours = dict()
     if pickling:
-        palettes_dir = os.path.join(os.path.dirname(__file__), "local_palettes")
+        palettes_dir = os.path.join(os.path.dirname(__file__), "loc_palettes")
         if not os.path.exists(palettes_dir):
             os.makedirs(palettes_dir, exist_ok=True)
 
