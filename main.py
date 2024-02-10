@@ -157,13 +157,15 @@ def method2(batch_loader: loader.BatchLoader, config: Config, pickling: bool = T
     neighbours = dict()
     if pickling:
         palettes_dir = os.path.join(os.path.dirname(__file__), "local_palettes")
+        os.makedirs(palettes_dir, exist_ok=True)
 
     for feature_batch_iterator in batch_loader:
         cls = feature_batch_iterator.cls
         palettes = list()
-        for image_batch in tqdm(feature_batch_iterator, desc=" feature"):
-            palettes.append(palette.generate_palette(image_batch, config.local_palette, verbose=True))
-        
+        for idx, image_batch in enumerate(tqdm(feature_batch_iterator, desc=" feature")):
+            palettes.append(palette.generate_palette(image_batch, config.local_palette))
+            print(f"Generated palette nr {idx}")
+
         local_palette = palette.merge_palettes(palettes, config.local_palette.batching_k_means)
         local_palettes[cls] = local_palette
         neighbours[cls] = KNeighborsClassifier(n_neighbors=1).fit(local_palette, np.arange(local_palette.shape[0]))
