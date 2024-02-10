@@ -127,11 +127,14 @@ def main():
 
     correct = 0
     for _, entry in val_entries.iterrows():
-        with PIL.Image.open(os.path.join(config.dataset_path, entry['path'])) as sample:
-            prediction = predict(sample, global_palette, class_histograms, config.global_palette, neighbours)
-            print("prediction: ", prediction)
-            correct += (prediction == entry['encoded_cls'])
-    print(correct / len(entry['encoded_cls']))
+        try:
+            with PIL.Image.open(os.path.join(config.dataset_path, entry['path'])) as sample:
+                prediction = predict(sample, global_palette, class_histograms, config.global_palette, neighbours)
+                print("prediction: ", prediction)
+                correct += (prediction == entry['encoded_cls'])
+        except FileNotFoundError:
+            continue
+    # print(correct / len(entry['encoded_cls']))
 
     # NOTE: this is temporary
     # with PIL.Image.open(f"{config.dataset_path}/Impressionism/claude-monet_water-lilies-6.jpg") as sample:
