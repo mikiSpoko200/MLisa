@@ -61,7 +61,7 @@ class BatchLoader(Iterable[ImageIterator]):
     def _cls_encoding(target: ClassificationTarget, config: Config) -> dict[int, str]:
         """Convert class indices from `*_class.txt` files to their string counterparts."""
         with open(os.path.join(config.dataset_labels_path, f"{target.name.lower()}_class.txt"), "r") as f:
-            return {int(num): cls.strip() for (num, cls) in map(lambda line: line.split(" "), f.readlines())}
+            return {int(num): cls.replace("_", " ").strip() for (num, cls) in map(lambda line: line.split(" "), f.readlines())}
 
     @staticmethod
     def _create_index(config: Config) -> dict[ClassificationTarget, dict[str, list[str]]]:

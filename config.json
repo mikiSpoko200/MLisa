@@ -3,17 +3,17 @@
     "dataset-path": "../wikiart-compressed-256",
     "dataset-labels-path": "./wikiart-labels",
     "loader": {
-        "batch-size": "32 MiB"
+        "batch-size": "128 MiB"
     },
     "global-palette": {
-        "size": 10000,
+        "size": 1000,
         "patch-size": 16,
         "coverage": 0.01,
         "random": true,
         "batching-k-means": {
-            "batch-size": 1000,
+            "batch-size": 100,
             "max-iterations": 20,
-            "number-of-clusters": 10000
+            "number-of-clusters": 1000
         }
     },
     "local-palette": {
