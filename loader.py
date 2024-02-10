@@ -23,17 +23,20 @@ class ImageIterator(Iterable[list[Image]]):
         for file in self._feature_file_paths:
             image_path = os.path.join(self._dataset_path, file)
 
-            with PIL.Image.open(image_path) as img:
-                pixel_data_size = img.size[0] * img.size[1] * len(img.getbands())
+            try:
+                with PIL.Image.open(image_path) as img:
+                    pixel_data_size = img.size[0] * img.size[1] * len(img.getbands())
 
-                if total_pixel_data_size + pixel_data_size <= self._batch_size:
-                    total_pixel_data_size += pixel_data_size
-                else:
-                    yield accumulated_images
-                    total_pixel_data_size = pixel_data_size
-                    accumulated_images = list()
-                img.load()
-                accumulated_images.append(img)
+                    if total_pixel_data_size + pixel_data_size <= self._batch_size:
+                        total_pixel_data_size += pixel_data_size
+                    else:
+                        yield accumulated_images
+                        total_pixel_data_size = pixel_data_size
+                        accumulated_images = list()
+                    img.load()
+                    accumulated_images.append(img)
+            except FileNotFoundError:
+                pass
         yield accumulated_images
 
 

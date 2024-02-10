@@ -36,7 +36,6 @@ def whiten(x_list):
 MAX_PATCHES_TOTAL_SIZE: int = 1 * 1024 * 1024 * 1024
 
 
-@profile
 def generate_palette(images: list[Image], config: GlobalPaletteConfig, verbose: bool = False, whitening: bool = False):
     # Preallocate memory for all patches
 
@@ -57,12 +56,10 @@ def generate_palette(images: list[Image], config: GlobalPaletteConfig, verbose: 
             break
         local_patches = utils.get_patches(image, config, patch_count)
         local_patch_count = len(local_patches)
-        print(f"Remaining patches: {patch_count}, current patch batch size: {local_patch_count}")
         patches[offset: offset + local_patch_count] = local_patches
         del local_patches
         offset += local_patch_count
         patch_count -= local_patch_count
-        print(f"Batch size: {bitmath.Byte(local_patch_count * config.patch_size * config.patch_size * 3).to_MiB()}")
 
     if whitening:
         patches = whiten(patches)
