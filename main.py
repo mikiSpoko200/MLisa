@@ -78,16 +78,17 @@ def main():
         palettes.append(curr_palette)
         pickle.dump(curr_palette, open(os.path.join(os.path.dirname(__file__), f"palettes\\palette{idx}"), "wb"))
 
-    palettes = [
-        palette.generate_palette(image_batch, config.global_palette, verbose=True) for image_batch in
-        tqdm(feature_batches(batch_loader), desc=" features")
-    ]
-
-    palettes_dir = os.path.join(os.path.dirname(__file__), "palettes")
-    for file in os.listdir(palettes_dir):
-        palettes.append(pickle.load(open(os.path.join(palettes_dir, file), "rb")))
-
     global_palette = palette.merge_palettes(palettes, config.global_palette.batching_k_means)
+    pickle.dump(global_palette, open(os.path.join(os.path.dirname(__file__), "global_palette"), "wb"))
+
+    # palettes = [
+    #     palette.generate_palette(image_batch, config.global_palette, verbose=True) for image_batch in
+    #     tqdm(feature_batches(batch_loader), desc=" features")
+    # ]
+
+    # palettes_dir = os.path.join(os.path.dirname(__file__), "palettes")
+    # for file in os.listdir(palettes_dir):
+    #     palettes.append(pickle.load(open(os.path.join(palettes_dir, file), "rb")))
 
     neighbours = KNeighborsClassifier(n_neighbors=1).fit(global_palette, np.arange(global_palette.shape[0]))
 
@@ -120,6 +121,7 @@ def main():
 
     # class_histograms = pickle.load(open(os.path.join(os.path.dirname(__file__), "class_histograms"), "rb"))
 
+    # VALIDATION
     batch_loader.cls_encoding(utils.ClassificationTarget.STYLE, config)
     val_entries = pd.read_csv(os.path.join(config.dataset_labels_path, f"{batch_loader.target.name.lower()}_val.csv"), names=["path", "encoded_cls"])
 
