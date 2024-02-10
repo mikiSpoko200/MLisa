@@ -2,6 +2,8 @@ import argparse
 import json
 import itertools
 
+from memory_profiler import profile
+
 import PIL
 import numpy as np
 from PIL.Image import Image
@@ -22,13 +24,14 @@ else:
     from tqdm import tqdm
 
 
+@profile
 def feature_batches(features_iterator: loader.BatchLoader) -> Iterator[list[Image]]:
     samples = list()
     samples.clear()
     for features in tqdm(itertools.zip_longest(*features_iterator), desc="class batches"):
         samples.clear()
         samples.extend(itertools.chain.from_iterable(
-            (image for image in image_batch if image_batch is not None) for image_batch in features))
+            (image for image in image_batch) for image_batch in features if image_batch is not None))
         yield samples
 
 
