@@ -245,8 +245,7 @@ def main():
     # optionally override default config
     config.default_config = config.Config.from_json(config_json)
 
-    loader_params = [TARGET, config]
-    batch_loader = loader.BatchLoader(*loader_params)
+    batch_loader = loader.BatchLoader(TARGET)
 
     # method1(batch_loader, loader_params, config)
 
