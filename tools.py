@@ -23,14 +23,16 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 
-
 # Emulate conditional compilation
 if config.PROFILE:
-    def tqdm(*args, **_): return args[0]
+    def tqdm(*args, **_):
+        return args[0]
 else:
     from tqdm import tqdm
 
 from random import sample
+
+
 def unbiased():
     loader.BatchLoader(ClassificationTarget.ARTIST)
     target_subindex_size = {
@@ -42,7 +44,8 @@ def unbiased():
     subindex = dict()
     for target, cls_paths in loader.BatchLoader._index.items():
         subindex[target] = {
-            cls: sample(paths, target_subindex_size[target]) for cls, paths in cls_paths.items() if len(paths) >= target_subindex_size[target]
+            cls: sample(paths, target_subindex_size[target]) for cls, paths in cls_paths.items() if
+            len(paths) >= target_subindex_size[target]
         }
 
     import os
@@ -59,11 +62,6 @@ def unbiased():
                 s = os.path.join(default_config.dataset_path, path)
                 t = os.path.join(random_path, path.split("/")[1])
                 copy_if_not_exists(s, t)
-
-
-    from pprint import pprint
-
-    pprint(subindex)
 
 
 class HDF5:
@@ -83,13 +81,10 @@ class HDF5:
         if self.file:
             self.file.close()
 
-
     def append(self, dataset: str, images: np.ndarray):
         if self.mode == 'a':
             if self.file is None:
                 raise ValueError("File is not open. Use 'with' statement to open the file.")
-
-
 
         # Create dataset if not exists, or get the existing dataset
         self.file[dataset]
@@ -137,7 +132,6 @@ def compression_ratios(target: ClassificationTarget, config: Config):
             image_path = os.path.join(config.dataset_path, file)
 
             with PIL.Image.open(image_path) as img:
-
                 compression_data.append([
                     image_path,
                     cls,
