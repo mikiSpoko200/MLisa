@@ -85,6 +85,7 @@ class LocalPaletteConfig:
 
 @dataclasses.dataclass
 class Config:
+    subrandom: bool
     dataset_path: str
     dataset_labels_path: str
     batch_size: bitmath.Bitmath
@@ -96,6 +97,7 @@ class Config:
     @classmethod
     def from_json(cls, json: typing.Dict[str, typing.Any]) -> typing.Self:
         config = cls(
+            subrandom=bool(json["subrandom"]),
             dataset_path=json["dataset-path"],
             dataset_labels_path=json["dataset-labels-path"],
             batch_size=bitmath.parse_string(json["loader"]["batch-size"]),

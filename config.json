@@ -1,4 +1,5 @@
 {
+    "subrandom": false,
     "data-storage": "disc",
     "random-seed": 0,
     "dataset-path": "./wikiart - Copy",

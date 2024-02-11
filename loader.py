@@ -18,26 +18,34 @@ class ImageIterator(Iterable[list[Image]]):
         self._dataset_path = default_config.dataset_path
         self._batch_size: int = default_config.batch_size.to_Byte()
 
+    @staticmethod
+    def _insert_text_before_extension(file, text_to_insert):
+        # Split the file name and extension
+        file_name, file_extension = os.path.splitext(file)
+
+        return f"{file_name}_{text_to_insert}{file_extension}"
+
     def __iter__(self) -> Iterator[list[Image]]:
         accumulated_images: list[Image] = list()
         total_pixel_data_size = 0
         for file in self._feature_file_paths:
             image_path = os.path.join(self._dataset_path, file)
+            for subimage in (map(lambda i: f"{os.path.basename(image_path)}_{i}.jpg",
+                                 range(1, 5) if default_config.subrandom else [image_path])):
+                try:
+                    with PIL.Image.open(subimage) as img:
+                        pixel_data_size = img.size[0] * img.size[1] * len(img.getbands())
 
-            try:
-                with PIL.Image.open(image_path) as img:
-                    pixel_data_size = img.size[0] * img.size[1] * len(img.getbands())
-
-                    if total_pixel_data_size + pixel_data_size <= self._batch_size:
-                        total_pixel_data_size += pixel_data_size
-                    else:
-                        yield accumulated_images
-                        total_pixel_data_size = pixel_data_size
-                        accumulated_images = list()
-                    img.load()
-                    accumulated_images.append(img)
-            except FileNotFoundError:
-                pass
+                        if total_pixel_data_size + pixel_data_size <= self._batch_size:
+                            total_pixel_data_size += pixel_data_size
+                        else:
+                            yield accumulated_images
+                            total_pixel_data_size = pixel_data_size
+                            accumulated_images = list()
+                        img.load()
+                        accumulated_images.append(img)
+                except FileNotFoundError:
+                    pass
         yield accumulated_images
 
 
