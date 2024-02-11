@@ -36,9 +36,9 @@ from random import sample
 def unbiased():
     loader.BatchLoader(ClassificationTarget.ARTIST)
     target_subindex_size = {
-        ClassificationTarget.ARTIST: 470,
-        ClassificationTarget.STYLE: 400,
-        ClassificationTarget.GENRE: 1081,
+        ClassificationTarget.ARTIST: 330,
+        ClassificationTarget.STYLE: 280,
+        ClassificationTarget.GENRE: 760,
     }
 
     subindex = dict()
@@ -187,7 +187,7 @@ class TargetInfo:
         raise NotImplementedError()
 
 
-def visualize_dataset():
+def visualize_dataset(all=False):
     index = dict()
     for target in ClassificationTarget:
         cls_encodings = BatchLoader._cls_encoding(target)
@@ -195,11 +195,14 @@ def visualize_dataset():
             os.path.join(default_config.dataset_labels_path, f"{target.name.lower()}_train.csv"),
             names=["path", "encoded_cls"]
         )
-        test = pd.read_csv(
-            os.path.join(default_config.dataset_labels_path, f"{target.name.lower()}_val.csv"),
-            names=["path", "encoded_cls"]
-        )
-        stacked_data = pd.concat([train, test], ignore_index=True)
+        if all:
+            test = pd.read_csv(
+                os.path.join(default_config.dataset_labels_path, f"{target.name.lower()}_val.csv"),
+                names=["path", "encoded_cls"]
+            )
+            stacked_data = pd.concat([train, test], ignore_index=True)
+        else:
+            stacked_data = train
         stacked_data["encoded_cls"] = stacked_data["encoded_cls"].apply(lambda x: cls_encodings[x])
         # Convert to dictionary of class to path lists (for that class)
         index[target] = stacked_data.groupby("encoded_cls")["path"].apply(list).to_dict()
@@ -279,8 +282,8 @@ def consume(iterator, n=None):
 
 
 if __name__ == '__main__':
-    unbiased()
-    # visualize_dataset()
+    # unbiased()
+    visualize_dataset()
 
     # loader1 = BatchLoader(ClassificationTarget.ARTIST, config)
     # loader2 = BatchLoader(ClassificationTarget.ARTIST, config)
