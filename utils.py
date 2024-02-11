@@ -7,7 +7,9 @@ from PIL import Image
 from sklearn.feature_extraction.image import extract_patches_2d
 from sklearn.neighbors import KNeighborsClassifier
 
+import config
 from config import default_config
+from config import LocalPaletteConfig, GlobalPaletteConfig
 
 
 class ClassificationTarget(enum.Enum):
@@ -39,21 +41,21 @@ def read_image(path: str):
     return image
 
 
-def get_patches(image: np.ndarray, max_patch_count: int | float):
+def get_patches(image: np.ndarray, config: GlobalPaletteConfig | LocalPaletteConfig, max_patch_count: int | float):
     height, width = image.shape[0], image.shape[1]
-    assert height >= default_config.global_palette.patch_size and width >= default_config.global_palette.patch_size
+    assert height >= config.patch_size and width >= config.patch_size
 
     # FIXME: should this use min?
     sample_count = int(
-        min(default_config.global_palette.coverage
-            * (height - default_config.global_palette.patch_size + 1)
-            * (width - default_config.global_palette.patch_size + 1),
+        min(config.coverage
+            * (height - config.patch_size + 1)
+            * (width - config.patch_size + 1),
             max_patch_count
             )
     ) if type(max_patch_count) is int else max_patch_count
-    if default_config.global_palette.random:
-        patches = extract_patches_2d(image, (default_config.global_palette.patch_size, default_config.global_palette.patch_size), max_patches=sample_count).reshape(
-            (-1, default_config.global_palette.patch_size * default_config.global_palette.patch_size * 3))
+    if config.random:
+        patches = extract_patches_2d(image, (config.patch_size, config.patch_size), max_patches=sample_count).reshape(
+            (-1, config.patch_size * config.patch_size * 3))
     else:
         raise NotImplementedError("Efficient non-random sampling is not implemented")
         # TODO: reimplement it to take patching factor not explicit strides
@@ -61,7 +63,7 @@ def get_patches(image: np.ndarray, max_patch_count: int | float):
         stride_y, stride_x = 1, 1
         curr_coverage = 1.0
         iter = 0
-        while curr_coverage > default_config.global_palette.coverage:
+        while curr_coverage > config.coverage:
             curr_coverage = 1.0 / (stride_x * stride_y)
             if iter % 2 == 0:
                 stride_y += 1
@@ -70,13 +72,13 @@ def get_patches(image: np.ndarray, max_patch_count: int | float):
 
         # sliding window
         patches = []
-        for upper_left_y in range(0, height - default_config.global_palette.patch_size + 1, stride_y):
-            for upper_left_x in range(0, width - default_config.global_palette.patch_size + 1, stride_x):
+        for upper_left_y in range(0, height - config.patch_size + 1, stride_y):
+            for upper_left_x in range(0, width - config.patch_size + 1, stride_x):
                 patch = image[
-                        upper_left_y: upper_left_y + default_config.global_palette.patch_size,
-                        upper_left_x: upper_left_x + default_config.global_palette.patch_size,
+                        upper_left_y: upper_left_y + config.patch_size,
+                        upper_left_x: upper_left_x + config.patch_size,
                         :,
-                        ].reshape((default_config.global_palette.patch_size * config.patch_size * 3))
+                        ].reshape((config.patch_size * config.patch_size * 3))
                 patches.append(patch)
     return np.array(patches)
 

@@ -25,12 +25,17 @@ class ImageIterator(Iterable[list[Image]]):
 
         return f"{file_name}_{text_to_insert}{file_extension}"
 
+    def extrapolate(self, filename, image_number):
+        splitted = filename.split(".")[0]
+        return f"{self._dataset_path}/{splitted}_{image_number}.jpg"
+
+
     def __iter__(self) -> Iterator[list[Image]]:
         accumulated_images: list[Image] = list()
         total_pixel_data_size = 0
         for file in self._feature_file_paths:
             image_path = os.path.join(self._dataset_path, file)
-            for subimage in (map(lambda i: f"{os.path.basename(image_path)}_{i}.jpg",
+            for subimage in (map(lambda x : self.extrapolate(file, x),
                                  range(1, 5) if default_config.subrandom else [image_path])):
                 try:
                     with PIL.Image.open(subimage) as img:

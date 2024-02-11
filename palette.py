@@ -56,7 +56,7 @@ def generate_palette(
     for image in tqdm(image_generator, desc="patches"):
         if patch_count <= 0:
             break
-        local_patches = utils.get_patches(image, patch_count)
+        local_patches = utils.get_patches(image, config, patch_count)
         local_patch_count = len(local_patches)
         patches[offset: offset + local_patch_count] = local_patches
         del local_patches

@@ -18,7 +18,7 @@ def match1(
     # TODO: this is duplicated in palette
     image_array = np.asarray(image, dtype='B').reshape(image.height, image.width, len(image.getbands()))
 
-    patches = get_patches(image_array, default_config.global_palette.coverage)
+    patches = get_patches(image_array,default_config.global_palette , default_config.global_palette.predict_coverage)
 
     _, neighbors = k_closest(patches, palette, 1, neigh)
     return histogram(neighbors, palette.shape[0]), len(patches)
@@ -32,5 +32,5 @@ def match2(
     # TODO: this is duplicated in palette
     image_array = np.asarray(image, dtype='B').reshape(image.height, image.width, len(image.getbands()))
 
-    patches = get_patches(image_array, default_config.local_palette.coverage)
+    patches = get_patches(image_array, default_config.local_palette, default_config.local_palette.predict_coverage)
     return k_closest(patches, palette, default_config.local_palette.k_neigh, neigh)

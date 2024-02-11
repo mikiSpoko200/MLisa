@@ -81,16 +81,14 @@ def method1(batch_loader: loader.BatchLoader, loader_params: list, pickling: boo
                 assert palettes_dir is not None
                 pickle.dump(curr_palette, open(os.path.join(palettes_dir, f"palette{idx}"), "wb"))
 
-        global_palette = palette.merge_palettes(palettes, default_config.global_palette.batching_k_means)
+        global_palette = palette.merge_palettes(palettes, default_config.global_palette)
         if pickling:
             pickle.dump(global_palette, open(os.path.join(os.path.dirname(__file__), "global_palette"), "wb"))
         fig = palette.plot_palette(global_palette, default_config.global_palette).savefig(
             os.path.join(os.path.dirname(__file__), f"global_palette.png"))
         plt.close()
     else:
-        global_palette = pickle.load(
-            global_palette, open(os.path.join(os.path.dirname(__file__), "global_palette"), "rb")
-        )
+        global_palette = pickle.load(open(os.path.join(os.path.dirname(__file__), "global_palette"), "rb"))
 
     # CALCULATING AVERAGE CLASS HISTOGRAMS
     neighbours = KNeighborsClassifier(n_neighbors=1).fit(global_palette, np.arange(global_palette.shape[0]))
@@ -183,14 +181,14 @@ def method2(batch_loader: loader.BatchLoader, pickling: bool = True, loading: bo
         # if cls != "Vincent_van_Gogh" and cls != "Pablo_Picasso":
         #     continue
 
-        print(cls)
+        print(f'\n{cls}')
         if not loading:
             palettes = list()
             for idx, image_batch in enumerate(tqdm(feature_batch_iterator, desc=" feature")):
                 palettes.append(palette.generate_palette(image_batch, default_config.local_palette))
                 print(f"Generated palette nr {idx}")
 
-            local_palette = palette.merge_palettes(palettes, default_config.local_palette.batching_k_means)
+            local_palette = palette.merge_palettes(palettes, default_config.local_palette)
             local_palettes[cls] = local_palette
 
             fig = palette.plot_palette(local_palettes[cls], default_config.local_palette).savefig(
@@ -217,15 +215,16 @@ def method2(batch_loader: loader.BatchLoader, pickling: bool = True, loading: bo
     class_encoding = batch_loader._cls_encoding(TARGET)
     for _, entry in val_entries.sample(frac=0.1).iterrows():
         try:
-            with PIL.Image.open(os.path.join(default_config.dataset_path, entry['path'])) as sample:
+            with PIL.Image.open(os.path.join("./cut_wikiart/", entry['path'])) as sample:
                 prediction = predict2(sample, local_palettes, neighbours)
                 target = class_encoding[entry["encoded_cls"]]
-                print(f"target: {target}, prediction: {prediction}")
+                # print(f"target: {target}, prediction: {prediction}")
                 correct += (prediction == target)
                 all_entries += 1
+                print(f'\r{correct / all_entries}', end="")
         except FileNotFoundError:
             continue
-    print(correct / all_entries)
+    # print(correct / all_entries)
 
 
 def main():
@@ -257,7 +256,7 @@ def main():
 
     # method1(batch_loader, loader_params, config)
 
-    method2(batch_loader)
+    method2(batch_loader, loading=True)
 
 
 if __name__ == "__main__":

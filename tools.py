@@ -3,22 +3,23 @@ import dataclasses
 import itertools
 import json
 import os
-import shutil
-import random
 from typing import Iterator
 
-import bitmath
-import pandas as pd
+import numpy as np
+
 import PIL
+import bitmath
 from PIL.Image import Image
-import matplotlib.pyplot as plt
 
 import config
 import loader
-from config import default_config
+from config import Config, default_config
+
 from utils import ClassificationTarget
 from loader import BatchLoader
+import pandas as pd
 
+import matplotlib.pyplot as plt
 
 # Emulate conditional compilation
 if config.PROFILE:
@@ -26,6 +27,9 @@ if config.PROFILE:
         return args[0]
 else:
     from tqdm import tqdm
+
+import random
+from random import sample
 
 
 def unbiased():
@@ -40,9 +44,18 @@ def unbiased():
     random.seed(default_config.random_seed)
     for target, cls_paths in loader.BatchLoader._index.items():
         subindex[target.name] = {
-            cls: random.sample(paths, target_subindex_size[target]) for cls, paths in cls_paths.items() if
+            cls: sample(paths, target_subindex_size[target]) for cls, paths in cls_paths.items() if
             len(paths) >= target_subindex_size[target]
         }
+
+    import os
+
+    with open("subrandom-index.json", "w") as index:
+        json.dump(subindex, index)
+
+    exit()
+
+    import shutil
 
     def copy_if_not_exists(source, t):
         if not os.path.exists(t):
@@ -56,17 +69,72 @@ def unbiased():
                 t = os.path.join(random_path, path.split("/")[1])
                 copy_if_not_exists(s, t)
 
-    with open("subrandom-index.json", "w") as index:
-        json.dump(subindex, index)
+class HDF5:
+    def __init__(self, file_name, image_shape, mode='a'):
+        assert default_config.hdf5_storage is not None
+
+        self.file_name = file_name
+        self.image_shape = image_shape
+        self.mode = mode
+        self.file = None
+
+    def __enter__(self):
+        self.file = h5py.File(self.file_name, self.mode)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.file:
+            self.file.close()
+
+    def append(self, dataset: str, images: np.ndarray):
+        if self.mode == 'a':
+            if self.file is None:
+                raise ValueError("File is not open. Use 'with' statement to open the file.")
+
+        # Create dataset if not exists, or get the existing dataset
+        self.file[dataset]
+        current_size = dataset.shape[0]
+        new_size = current_size + images.shape[0]
+        dataset.resize(new_size, axis=0)
+        dataset[current_size:new_size] = images
 
 
-def compression_ratios(target: ClassificationTarget):
+def dataset_to_hdf5(images: np.ndarray):
+    """
+    images: array of size:
+
+
+    """
+    num_images = len(images)
+
+    # Create a new HDF5 file
+    file = h5py.File(
+        "wikiart-hdf5" + f"{num_images}_many.h5", "w"
+    )
+
+    # Create a dataset in the file
+    dataset = file.create_dataset(
+        "images",
+        np.shape(images),
+        h5py.h5t.STD_U8BE,
+        data=images,
+    )
+    meta_set = file.create_dataset(
+        "meta",
+        np.shape(labels),
+        h5py.h5t.STD_U8BE,
+        data=labels,
+    )
+    file.close()
+
+
+def compression_ratios(target: ClassificationTarget, config: Config):
     _ = BatchLoader(target, config)
     compression_data = list()
 
     for cls, feature_paths in list(BatchLoader._index[target].items())[5:10]:
         for file in tqdm(feature_paths, desc=cls):
-            image_path = os.path.join(default_config.dataset_path, file)
+            image_path = os.path.join(config.dataset_path, file)
 
             with PIL.Image.open(image_path) as img:
                 compression_data.append([
@@ -124,7 +192,7 @@ class TargetInfo:
         raise NotImplementedError()
 
 
-def visualize_dataset(include_test=False):
+def visualize_dataset(all=False):
     index = dict()
     for target in ClassificationTarget:
         cls_encodings = BatchLoader._cls_encoding(target)
@@ -132,7 +200,7 @@ def visualize_dataset(include_test=False):
             os.path.join(default_config.dataset_labels_path, f"{target.name.lower()}_train.csv"),
             names=["path", "encoded_cls"]
         )
-        if include_test:
+        if all:
             test = pd.read_csv(
                 os.path.join(default_config.dataset_labels_path, f"{target.name.lower()}_val.csv"),
                 names=["path", "encoded_cls"]

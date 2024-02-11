@@ -41,6 +41,7 @@ class HDF5StorageConfig:
 class GlobalPaletteConfig:
     size: int
     coverage: float
+    predict_coverage: float
     random: bool
     batching_k_means: BatchingKMeansConfig
     patch_size: int
@@ -51,6 +52,7 @@ class GlobalPaletteConfig:
         config = cls(
             size=int(json["size"]),
             coverage=float(json["coverage"]),
+            predict_coverage=float(json["predict-coverage"]),
             random=bool(json["random"]),
             batching_k_means=BatchingKMeansConfig.from_json(json["batching-k-means"]),
             patch_size=int(json["patch-size"])
@@ -63,6 +65,7 @@ class GlobalPaletteConfig:
 class LocalPaletteConfig:
     size: int
     coverage: float
+    predict_coverage: float
     random: bool
     batching_k_means: BatchingKMeansConfig
     patch_size: int
@@ -74,6 +77,7 @@ class LocalPaletteConfig:
         config = cls(
             size=int(json["size"]),
             coverage=float(json["coverage"]),
+            predict_coverage=float(json["predict-coverage"]),
             random=bool(json["random"]),
             batching_k_means=BatchingKMeansConfig.from_json(json["batching-k-means"]),
             patch_size=int(json["patch-size"]),
