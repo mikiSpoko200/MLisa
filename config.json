@@ -1,4 +1,5 @@
 {
+    "data-storage": "disc",
     "random-seed": 0,
     "dataset-path": "../wikiart-compressed-256",
     "dataset-labels-path": "./wikiart-labels",
@@ -19,5 +20,9 @@
     "local-palette": {
         "size": 128,
         "patch-size": 16
+    },
+    "hdf5": {
+        "base-directory": "hdf5",
+        "dataset": "256"
     }
 }
