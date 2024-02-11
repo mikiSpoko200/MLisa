@@ -14,14 +14,14 @@ from PIL.Image import Image
 import h5py
 
 import config
+import loader
+from config import Config, default_config
 
 from utils import ClassificationTarget
 from loader import BatchLoader
-from config import Config
 import pandas as pd
 
 import matplotlib.pyplot as plt
-
 
 
 # Emulate conditional compilation
@@ -30,9 +30,81 @@ if config.PROFILE:
 else:
     from tqdm import tqdm
 
+from random import sample
+def unbiased():
+    loader.BatchLoader(ClassificationTarget.ARTIST)
+    target_subindex_size = {
+        ClassificationTarget.ARTIST: 470,
+        ClassificationTarget.STYLE: 400,
+        ClassificationTarget.GENRE: 1081,
+    }
 
-def store_many_hdf5(images, labels):
-    """Stores an array of images to HDF5."""
+    subindex = dict()
+    for target, cls_paths in loader.BatchLoader._index.items():
+        subindex[target] = {
+            cls: sample(paths, target_subindex_size[target]) for cls, paths in cls_paths.items() if len(paths) >= target_subindex_size[target]
+        }
+
+    import os
+    import shutil
+
+    def copy_if_not_exists(source, t):
+        if not os.path.exists(t):
+            shutil.copy(source, t)
+
+    random_path = "./wikiart-subrandom"
+    for cls_paths in subindex.values():
+        for paths in cls_paths.values():
+            for path in paths:
+                s = os.path.join(default_config.dataset_path, path)
+                t = os.path.join(random_path, path.split("/")[1])
+                copy_if_not_exists(s, t)
+
+
+    from pprint import pprint
+
+    pprint(subindex)
+
+
+class HDF5:
+    def __init__(self, file_name, image_shape, mode='a'):
+        assert default_config.hdf5_storage is not None
+
+        self.file_name = file_name
+        self.image_shape = image_shape
+        self.mode = mode
+        self.file = None
+
+    def __enter__(self):
+        self.file = h5py.File(self.file_name, self.mode)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.file:
+            self.file.close()
+
+
+    def append(self, dataset: str, images: np.ndarray):
+        if self.mode == 'a':
+            if self.file is None:
+                raise ValueError("File is not open. Use 'with' statement to open the file.")
+
+
+
+        # Create dataset if not exists, or get the existing dataset
+        self.file[dataset]
+        current_size = dataset.shape[0]
+        new_size = current_size + images.shape[0]
+        dataset.resize(new_size, axis=0)
+        dataset[current_size:new_size] = images
+
+
+def dataset_to_hdf5(images: np.ndarray):
+    """
+    images: array of size:
+
+
+    """
     num_images = len(images)
 
     # Create a new HDF5 file
@@ -54,6 +126,7 @@ def store_many_hdf5(images, labels):
         data=labels,
     )
     file.close()
+
 
 def compression_ratios(target: ClassificationTarget, config: Config):
     _ = BatchLoader(target, config)
@@ -120,16 +193,16 @@ class TargetInfo:
         raise NotImplementedError()
 
 
-def visualize_dataset(config: Config):
+def visualize_dataset():
     index = dict()
     for target in ClassificationTarget:
-        cls_encodings = BatchLoader._cls_encoding(target, config)
+        cls_encodings = BatchLoader._cls_encoding(target)
         train = pd.read_csv(
-            os.path.join(config.dataset_labels_path, f"{target.name.lower()}_train.csv"),
+            os.path.join(default_config.dataset_labels_path, f"{target.name.lower()}_train.csv"),
             names=["path", "encoded_cls"]
         )
         test = pd.read_csv(
-            os.path.join(config.dataset_labels_path, f"{target.name.lower()}_val.csv"),
+            os.path.join(default_config.dataset_labels_path, f"{target.name.lower()}_val.csv"),
             names=["path", "encoded_cls"]
         )
         stacked_data = pd.concat([train, test], ignore_index=True)
@@ -212,22 +285,8 @@ def consume(iterator, n=None):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Process some integers.")
-    parser.add_argument("--config", type=str, default="./config.json", help="Path to the configuration file")
-    parser.add_argument("--dataset-path", type=str, help="Override path to the dataset specified in --config")
-    parser.add_argument("--dataset-labels-path", type=str,
-                        help="Override path to the dataset labels specified in --config")
-    parser.add_argument("--batch-size", nargs=2, type=str,
-                        help="Override batch size for the loader specified in --config. Format: <value> <unit> (e.g. 256 MiB)")
-
-    args = parser.parse_args()
-
-    with open(args.config, "r") as config_file:
-        config_json = json.load(config_file)
-
-    config = Config.from_json(config_json)
-
-    visualize_dataset(config)
+    unbiased()
+    # visualize_dataset()
 
     # loader1 = BatchLoader(ClassificationTarget.ARTIST, config)
     # loader2 = BatchLoader(ClassificationTarget.ARTIST, config)
