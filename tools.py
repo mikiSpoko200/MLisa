@@ -43,12 +43,18 @@ def unbiased():
     subindex = dict()
     random.seed(default_config.random_seed)
     for target, cls_paths in loader.BatchLoader._index.items():
-        subindex[target] = {
+        subindex[target.name] = {
             cls: sample(paths, target_subindex_size[target]) for cls, paths in cls_paths.items() if
             len(paths) >= target_subindex_size[target]
         }
 
     import os
+
+    with open("subrandom-index.json", "w") as index:
+        json.dump(subindex, index)
+
+    exit()
+
     import shutil
 
     def copy_if_not_exists(source, t):
@@ -62,9 +68,6 @@ def unbiased():
                 s = os.path.join(default_config.dataset_path, path)
                 t = os.path.join(random_path, path.split("/")[1])
                 copy_if_not_exists(s, t)
-    with open("subrandom-index.json", "w") as index:
-        json.dump(subindex, index)
-
 
 class HDF5:
     def __init__(self, file_name, image_shape, mode='a'):
@@ -284,8 +287,8 @@ def consume(iterator, n=None):
 
 
 if __name__ == '__main__':
-    # unbiased()
-    visualize_dataset()
+    unbiased()
+    # visualize_dataset()
 
     # loader1 = BatchLoader(ClassificationTarget.ARTIST, config)
     # loader2 = BatchLoader(ClassificationTarget.ARTIST, config)

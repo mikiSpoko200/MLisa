@@ -248,7 +248,10 @@ def main():
     subrandom_index = None
     if os.path.exists("./subrandom-index.json"):
         with open("./subrandom-index.json") as index:
-            subrandom_index = json.load(index)
+            deserialized_raw = json.load(index)
+            subrandom_index = dict()
+            for target in deserialized_raw:
+                subrandom_index[utils.ClassificationTarget[target]] = deserialized_raw[target]
 
     batch_loader = loader.BatchLoader(TARGET, index=subrandom_index)
 
