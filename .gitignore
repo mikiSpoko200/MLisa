@@ -159,10 +159,12 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
-/wikiart-dataset
-/wikiart
+# Ignore all datasets
+wikiart
+wikiart*
+*wikiart
+*wikiart*/
 *.csv
 *class.txt
 *.prof
-
 .vscode/
