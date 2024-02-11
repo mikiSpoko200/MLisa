@@ -1,5 +1,7 @@
 import bitmath
 import numpy as np
+import matplotlib.pyplot as plt
+
 import config
 
 # from memory_profiler import profile
@@ -46,7 +48,7 @@ def generate_palette(images: list[Image], config: GlobalPaletteConfig | LocalPal
     patch_count = patch_memory_size // (config.patch_size * config.patch_size * 3)
 
     patches = np.zeros((patch_count, config.patch_size * config.patch_size * 3))
-                      # TODO: does this copy here?
+    # TODO: does this copy here?
     image_generator = (np.asarray(image, dtype='B').reshape(image.height, image.width, len(image.getbands()))
                        for image in images)
     # TODO: fragmentation?
@@ -100,3 +102,17 @@ def merge_palettes(palettes: list[np.ndarray], config: BatchingKMeansConfig,
 
     # return kmeans.labels_, kmeans.cluster_centers_
     return kmeans.cluster_centers_
+
+
+def plot_palette(palette: np.ndarray, config: config.GlobalPaletteConfig | config.LocalPaletteConfig):
+    # assumes palette is of "int-sqrtable" size, may not plot all if that's not the case
+    patches_num = palette.shape[0]
+    side = int(np.sqrt(patches_num))
+
+    fig = plt.figure(figsize=(side, side))
+    for xx in range(patches_num):
+        plt.subplot(side, side, xx + 1)
+        plt.imshow((palette[xx].astype(int)).reshape(config.patch_size, config.patch_size, 3))
+        plt.axis('off')
+
+    return fig

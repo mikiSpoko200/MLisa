@@ -9,6 +9,7 @@ from memory_profiler import profile
 import PIL
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from PIL.Image import Image
 from sklearn.neighbors import KNeighborsClassifier
 
@@ -39,7 +40,7 @@ def feature_batches(features_iterator: loader.BatchLoader) -> Iterator[list[Imag
 
 
 Class = str
-TARGET = utils.ClassificationTarget.STYLE
+TARGET = utils.ClassificationTarget.ARTIST
 
 
 def predict1(
@@ -80,6 +81,8 @@ def method1(batch_loader: loader.BatchLoader, loader_params: list, config: Confi
         global_palette = palette.merge_palettes(palettes, config.global_palette.batching_k_means)
         if pickling:
             pickle.dump(global_palette, open(os.path.join(os.path.dirname(__file__), "global_palette"), "wb"))
+        fig = palette.plot_palette(global_palette, config.global_palette).savefig(os.path.join(os.path.dirname(__file__), f"global_palette.png"))
+        plt.close()
     else:
         global_palette = pickle.load(global_palette, open(os.path.join(os.path.dirname(__file__), "global_palette"), "rb"))
 
@@ -128,8 +131,9 @@ def method1(batch_loader: loader.BatchLoader, loader_params: list, config: Confi
         try:
             with PIL.Image.open(os.path.join(config.dataset_path, entry['path'])) as sample:
                 prediction = predict1(sample, global_palette, class_histograms, config.global_palette, neighbours)
-                print("prediction: ", prediction)
-                correct += (prediction == class_encoding[entry["encoded_cls"]])
+                target = class_encoding[entry["encoded_cls"]]
+                print(f"target: {target}, prediction: {prediction}")
+                correct += (prediction == target)
                 all_entries += 1
         except FileNotFoundError:
             continue
@@ -152,6 +156,7 @@ def predict2(
     sums = {cls : np.sum(matches[cls][0]) for cls in matches.keys()}
     return min(sums, key=sums.get)
 
+
 def method2(batch_loader: loader.BatchLoader, config: Config, pickling: bool = True, loading: bool = False):
     # GENERATING LOCAL (CLASS) PALETTES
     local_palettes = dict()
@@ -163,9 +168,16 @@ def method2(batch_loader: loader.BatchLoader, config: Config, pickling: bool = T
 
     if loading:
         local_palettes = pickle.load(open(os.path.join(os.path.dirname(__file__), "local_palettes"), "rb"))
+    else:
+        palette_images_dir = os.path.join(os.path.dirname(__file__), "loc_palette_images")
+        if not os.path.exists(palette_images_dir):
+            os.makedirs(palette_images_dir, exist_ok=True)
 
     for feature_batch_iterator in batch_loader:
         cls = feature_batch_iterator.cls
+        # if cls != "Vincent_van_Gogh" and cls != "Pablo_Picasso":
+        #     continue
+
         print(cls)
         if not loading:
             palettes = list()
@@ -175,6 +187,9 @@ def method2(batch_loader: loader.BatchLoader, config: Config, pickling: bool = T
 
             local_palette = palette.merge_palettes(palettes, config.local_palette.batching_k_means)
             local_palettes[cls] = local_palette
+
+            fig = palette.plot_palette(local_palettes[cls], config.local_palette).savefig(os.path.join(palette_images_dir, f"{cls}.png"))
+            plt.close()
         neighbours[cls] = KNeighborsClassifier(n_neighbors=1).fit(local_palettes[cls], np.arange(local_palettes[cls].shape[0]))
 
         if pickling:
@@ -187,14 +202,18 @@ def method2(batch_loader: loader.BatchLoader, config: Config, pickling: bool = T
     batch_loader.cls_encoding(TARGET, config)
     val_entries = pd.read_csv(os.path.join(config.dataset_labels_path, f"{batch_loader.target.name.lower()}_val.csv"), names=["path", "encoded_cls"])
 
+    # only Van Gogh and Picasso
+    # val_entries = val_entries[(val_entries["encoded_cls"] == 15) | (val_entries["encoded_cls"] == 22)]
+
     correct, all_entries = 0, 0
     class_encoding = batch_loader.cls_encoding(TARGET, config)
-    for _, entry in val_entries.iterrows():
+    for _, entry in val_entries.sample(frac=0.1).iterrows():
         try:
             with PIL.Image.open(os.path.join(config.dataset_path, entry['path'])) as sample:
                 prediction = predict2(sample, local_palettes, config.local_palette, neighbours)
-                print("prediction: ", prediction)
-                correct += (prediction == class_encoding[entry["encoded_cls"]])
+                target = class_encoding[entry["encoded_cls"]]
+                print(f"target: {target}, prediction: {prediction}")
+                correct += (prediction == target)
                 all_entries += 1
         except FileNotFoundError:
             continue

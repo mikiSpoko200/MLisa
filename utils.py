@@ -35,7 +35,7 @@ BASIC_COLORS = np.array(
 )
 
 
-def read_image(path):
+def read_image(path: str):
     image = Image.open(path)
     return image
 
@@ -92,11 +92,6 @@ def histogram(neighbors: np.ndarray, palette_size: int) -> np.ndarray:
     neighbors = neighbors.flatten()
     hist = np.zeros((palette_size,))
     hist[neighbors] += 1
-    # _, histogram = np.unique(neighbors, return_counts=True)
-    # histogram = histogram.astype("float64")
-    # histogram /= patches_num
-
-    # return histogram
     return hist
 
 

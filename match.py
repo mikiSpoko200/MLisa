@@ -29,7 +29,7 @@ def match2(
     palette: np.ndarray,
     config: LocalPaletteConfig,
     neigh: KNeighborsClassifier | None = None
-) -> np.ndarray:
+) -> Tuple[np.ndarray, np.ndarray]:
     # TODO: this is duplicated in palette
     image_array = np.asarray(image, dtype='B').reshape(image.height, image.width, len(image.getbands()))
 
