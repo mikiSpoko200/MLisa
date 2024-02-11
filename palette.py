@@ -1,14 +1,18 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
-import config
+import config as config_module
 from config import default_config
-if config.PROFILE:  # Emulate conditional compilation
-    def tqdm(*args, **_): return args[0]
+
+if config_module.PROFILE:  # Emulate conditional compilation
+    def tqdm(*args, **_):
+        return args[0]
 else:
     from tqdm import tqdm
 from sklearn.cluster import MiniBatchKMeans
 from PIL.Image import Image
 import utils
+from config import GlobalPaletteConfig, LocalPaletteConfig
 
 
 def contrast(image):
@@ -41,7 +45,6 @@ def generate_palette(images: list[Image], verbose: bool = False, whitening: bool
     patch_count = patch_memory_size // (default_config.patch_size * default_config.patch_size * 3)
 
     patches = np.zeros((patch_count, default_config.patch_size * default_config.patch_size * 3))
-                      # TODO: does this copy here?
     image_generator = (np.asarray(image, dtype='B').reshape(image.height, image.width, len(image.getbands()))
                        for image in images)
     # TODO: fragmentation?
@@ -94,3 +97,17 @@ def merge_palettes(palettes: list[np.ndarray], verbose: bool = False, whitening:
 
     # return kmeans.labels_, kmeans.cluster_centers_
     return kmeans.cluster_centers_
+
+
+def plot_palette(palette: np.ndarray, local_config: GlobalPaletteConfig | LocalPaletteConfig):
+    # assumes palette is of "int-sqrtable" size, may not plot all if that's not the case
+    patches_num = palette.shape[0]
+    side = int(np.sqrt(patches_num))
+
+    fig = plt.figure(figsize=(side, side))
+    for xx in range(patches_num):
+        plt.subplot(side, side, xx + 1)
+        plt.imshow((palette[xx].astype(int)).reshape(local_config.patch_size, local_config.patch_size, 3))
+        plt.axis('off')
+
+    return fig

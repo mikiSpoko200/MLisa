@@ -13,7 +13,7 @@ class BatchingKMeansConfig:
     batch_size: int
     max_iterations: int
     number_of_clusters: int
-    parent: "GlobalPaletteConfig | None" = None
+    parent: "GlobalPaletteConfig | LocalPaletteConfig | None" = None
 
     @classmethod
     def from_json(cls, json: typing.Dict[str, typing.Any]) -> typing.Self:
@@ -60,11 +60,36 @@ class GlobalPaletteConfig:
 
 
 @dataclasses.dataclass
+class LocalPaletteConfig:
+    size: int
+    coverage: float
+    random: bool
+    batching_k_means: BatchingKMeansConfig
+    patch_size: int
+    k_neigh: int
+    parent: "Config | None" = None
+
+    @classmethod
+    def from_json(cls, json: typing.Dict[str, typing.Any]) -> typing.Self:
+        config = cls(
+            size=int(json["size"]),
+            coverage=float(json["coverage"]),
+            random=bool(json["random"]),
+            batching_k_means=BatchingKMeansConfig.from_json(json["batching-k-means"]),
+            patch_size=int(json["patch-size"]),
+            k_neigh=int(json["k-neigh"]),
+        )
+        config.batching_k_means.parent = config
+        return config
+
+
+@dataclasses.dataclass
 class Config:
     dataset_path: str
     dataset_labels_path: str
     batch_size: bitmath.Bitmath
     global_palette: GlobalPaletteConfig
+    local_palette: LocalPaletteConfig
     random_seed: int
     hdf5_storage: HDF5StorageConfig | None = None
 
@@ -75,11 +100,13 @@ class Config:
             dataset_labels_path=json["dataset-labels-path"],
             batch_size=bitmath.parse_string(json["loader"]["batch-size"]),
             global_palette=GlobalPaletteConfig.from_json(json["global-palette"]),
+            local_palette=LocalPaletteConfig.from_json(json["local-palette"]),
             random_seed=int(json["random-seed"])
         )
         if json["data-storage"] == "hdf5":
             config.hdf5_storage = HDF5StorageConfig.from_json(json["hdf5"])
         config.global_palette.parent = config
+        config.local_palette.parent = config
         return config
 
     @classmethod

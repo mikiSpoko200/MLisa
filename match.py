@@ -18,17 +18,19 @@ def match1(
     # TODO: this is duplicated in palette
     image_array = np.asarray(image, dtype='B').reshape(image.height, image.width, len(image.getbands()))
 
-    patches = get_patches(image_array, 0.1)
+    patches = get_patches(image_array, default_config.global_palette.coverage)
+
     _, neighbors = k_closest(patches, palette, 1, neigh)
-    return histogram(neighbors, patches.shape[0]), len(patches)
+    return histogram(neighbors, palette.shape[0]), len(patches)
 
 
 def match2(
-    image: np.ndarray,
+        image: Image,
         palette: np.ndarray,
-        k: int,
         neigh: KNeighborsClassifier | None = None
-) -> np.ndarray:
-    patches = get_patches(image, default_config.coverage)
+) -> Tuple[np.ndarray, np.ndarray]:
+    # TODO: this is duplicated in palette
+    image_array = np.asarray(image, dtype='B').reshape(image.height, image.width, len(image.getbands()))
 
-    return k_closest(patches, palette, k, neigh)
+    patches = get_patches(image_array, default_config.local_palette.coverage)
+    return k_closest(patches, palette, default_config.local_palette.k_neigh, neigh)

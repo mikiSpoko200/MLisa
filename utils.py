@@ -16,10 +16,6 @@ class ClassificationTarget(enum.Enum):
     GENRE = enum.auto()
     STYLE = enum.auto()
 
-
-# TODO: move this to "*-palette" configurations
-PATCH_SIZE: int = 16  # patches PATCH_SIZE x PATCH_SIZE
-
 BASIC_COLORS = np.array(
     [
         [255, 0, 0],
@@ -38,7 +34,7 @@ BASIC_COLORS = np.array(
 )
 
 
-def read_image(path):
+def read_image(path: str):
     image = Image.open(path)
     return image
 
@@ -95,15 +91,11 @@ def k_closest(patches: np.ndarray, palette: np.ndarray, k: int, neigh: KNeighbor
     return closest
 
 
-def histogram(neighbors: np.ndarray, patches_num: int) -> np.ndarray:
+def histogram(neighbors: np.ndarray, palette_size: int) -> np.ndarray:
     neighbors = neighbors.flatten()
-    hist = np.zeros((neighbors.shape[0],))
+    hist = np.zeros((palette_size,))
     hist[neighbors] += 1
-    _, histogram = np.unique(neighbors, return_counts=True)
-    histogram = histogram.astype("float64")
-    histogram /= patches_num
-
-    return histogram
+    return hist
 
 
 def plot_image(x, size):
