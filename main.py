@@ -2,8 +2,6 @@ import argparse
 import json
 import itertools
 
-from memory_profiler import profile
-
 import PIL
 import numpy as np
 from PIL.Image import Image
@@ -14,8 +12,10 @@ import match
 import palette
 import utils
 import config
+
+from config import default_config
+
 from typing import Iterator
-from config import Config, GlobalPaletteConfig
 
 # Emulate conditional compilation
 if config.PROFILE:
@@ -42,10 +42,9 @@ def predict(
         image: Image,
         global_palette: np.ndarray,
         class_histograms: dict[Class, np.ndarray],
-        config: GlobalPaletteConfig,
         neighbours: KNeighborsClassifier,
 ) -> Class:
-    (histogram, _) = match.match1(image, global_palette, config, neighbours)
+    (histogram, _) = match.match1(image, global_palette, neighbours)
     difference = dict()
     for cls, cls_histogram in class_histograms.items():
         difference[cls] = abs(cls_histogram - histogram).sum()
@@ -67,22 +66,23 @@ def main():
     with open(args.config, "r") as config_file:
         config_json = json.load(config_file)
 
-    config = Config.from_json(config_json)
+    # optionally override default config
+    config.default_config = config.Config.from_json(config_json)
 
-    loader_params = [utils.ClassificationTarget.ARTIST, config]
+    loader_params = (utils.ClassificationTarget.ARTIST,)
     batch_loader = loader.BatchLoader(*loader_params)
 
     palettes = [
-        palette.generate_palette(image_batch, config.global_palette, verbose=True) for image_batch in
+        palette.generate_palette(image_batch, verbose=True) for image_batch in
         tqdm(feature_batches(batch_loader), desc=" features")
     ]
-    global_palette = palette.merge_palettes(palettes, config.global_palette.batching_k_means)
+    global_palette = palette.merge_palettes(palettes, default_config.global_palette.batching_k_means)
 
     neighbours = KNeighborsClassifier(n_neighbors=1).fit(global_palette)
 
     class_histograms = dict()
     for feature_batch_iterator in loader.BatchLoader(*loader_params):
-        avg_histogram = np.zeros((config.global_palette.size,))
+        avg_histogram = np.zeros((default_config.global_palette.size,))
         total_patch_count = 0
 
         # Generate averaged class histogram
@@ -94,7 +94,6 @@ def main():
                     # TODO: image dimensions are hard coded here
                     image,
                     global_palette,
-                    config.global_palette,
                     neighbours
                 )
                 total_patch_count += patches_count
@@ -102,8 +101,8 @@ def main():
         class_histograms[feature_batch_iterator.cls] = avg_histogram / total_patch_count
 
     # NOTE: this is temporary
-    with PIL.Image.open(f"{config.dataset_path}/Impressionism/claude-monet_water-lilies-6.jpg") as sample:
-        print("prediction: ", predict(sample, global_palette, class_histograms, config.global_palette, neighbours))
+    with PIL.Image.open(f"{default_config.dataset_path}/Impressionism/claude-monet_water-lilies-6.jpg") as sample:
+        print("prediction: ", predict(sample, global_palette, class_histograms, neighbours))
 
 
 if __name__ == "__main__":
