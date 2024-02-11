@@ -2,7 +2,7 @@
     "subrandom": false,
     "data-storage": "disc",
     "random-seed": 0,
-    "dataset-path": "./wikiart - Copy",
+    "dataset-path": "./wikiart",
     "dataset-labels-path": "./wikiart-labels",
     "loader": {
         "batch-size": "128 MiB"
