@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import config as config_module
-from config import default_config
 
 if config_module.PROFILE:  # Emulate conditional compilation
     def tqdm(*args, **_):
@@ -35,16 +34,21 @@ def whiten(x_list):
 MAX_PATCHES_TOTAL_SIZE: int = 1 * 1024 * 1024 * 1024
 
 
-def generate_palette(images: list[Image], verbose: bool = False, whitening: bool = False):
+def generate_palette(
+        images: list[Image],
+        config: config_module.GlobalPaletteConfig | config_module.LocalPaletteConfig,
+        verbose: bool = False,
+        whitening: bool = False
+):
     # Preallocate memory for all patches
 
     def image_byte_size(image: Image) -> int:
         return image.height * image.width * len(image.getbands())
 
     patch_memory_size = min(MAX_PATCHES_TOTAL_SIZE, sum(map(image_byte_size, images)))
-    patch_count = patch_memory_size // (default_config.patch_size * default_config.patch_size * 3)
+    patch_count = patch_memory_size // (config.patch_size * config.patch_size * 3)
 
-    patches = np.zeros((patch_count, default_config.patch_size * default_config.patch_size * 3))
+    patches = np.zeros((patch_count, config.patch_size * config.patch_size * 3))
     image_generator = (np.asarray(image, dtype='B').reshape(image.height, image.width, len(image.getbands()))
                        for image in images)
     # TODO: fragmentation?
@@ -62,37 +66,37 @@ def generate_palette(images: list[Image], verbose: bool = False, whitening: bool
     if whitening:
         patches = whiten(patches)
 
-    assert default_config.parent is not None
+    assert config.parent is not None
 
     kmeans = (
         MiniBatchKMeans(
-            n_clusters=default_config.batching_k_means.number_of_clusters,
-            random_state=default_config.parent.random_seed,
+            n_clusters=config.batching_k_means.number_of_clusters,
+            random_state=config.parent.random_seed,
             verbose=verbose,
             n_init=1,
-            max_iter=default_config.batching_k_means.max_iterations,
-            batch_size=default_config.batching_k_means.batch_size)
+            max_iter=config.batching_k_means.max_iterations,
+            batch_size=config.batching_k_means.batch_size)
         .fit(patches))
     # return kmeans.labels_, kmeans.cluster_centers_
     return kmeans.cluster_centers_
 
 
-def merge_palettes(palettes: list[np.ndarray], verbose: bool = False, whitening: bool = False):
+def merge_palettes(palettes: list[np.ndarray],
+                   config: config_module.GlobalPaletteConfig | config_module.LocalPaletteConfig, verbose: bool = False,
+                   whitening: bool = False):
     patches_matrix = np.vstack(palettes)
 
     if whitening:
         patches_matrix = whiten(patches_matrix)
 
-    assert default_config.parent is not None and default_config.parent.parent is not None
-
     kmeans = (
         MiniBatchKMeans(
-            n_clusters=default_config.number_of_clusters,
-            random_state=default_config.parent.parent.random_seed,
+            n_clusters=config.batching_k_means.number_of_clusters,
+            random_state=config.parent.random_seed,
             verbose=verbose,
             n_init=1,
-            max_iter=default_config.max_iterations,
-            batch_size=default_config.batch_size
+            max_iter=config.batching_k_means.max_iterations,
+            batch_size=config.batching_k_means.batch_size
         ).fit(patches_matrix))
 
     # return kmeans.labels_, kmeans.cluster_centers_
