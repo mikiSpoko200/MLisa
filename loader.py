@@ -46,9 +46,12 @@ class BatchLoader(Iterable[ImageIterator]):
 
     _index: dict[ClassificationTarget, dict[str, list[str]]] = dict()
 
-    def __init__(self, target: ClassificationTarget):
+    def __init__(self, target: ClassificationTarget, index=None):
         if len(BatchLoader._index) == 0:
-            BatchLoader._index = BatchLoader._create_index()
+            if index is not None:
+                BatchLoader._index = index
+            else:
+                BatchLoader._index = BatchLoader._create_index()
         self.target = target
 
     def __iter__(self) -> Iterator[ImageIterator]:

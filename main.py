@@ -245,7 +245,12 @@ def main():
     # optionally override default config
     config.default_config = config.Config.from_json(config_json)
 
-    batch_loader = loader.BatchLoader(TARGET)
+    subrandom_index = None
+    if os.path.exists("./subrandom-index.json"):
+        with open("./subrandom-index.json") as index:
+            subrandom_index = json.load(index)
+
+    batch_loader = loader.BatchLoader(TARGET, index=subrandom_index)
 
     # method1(batch_loader, loader_params, config)
 

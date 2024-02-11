@@ -1,4 +1,3 @@
-import argparse
 import collections
 import dataclasses
 import itertools
@@ -11,7 +10,6 @@ import numpy as np
 import PIL
 import bitmath
 from PIL.Image import Image
-import h5py
 
 import config
 import loader
@@ -30,6 +28,7 @@ if config.PROFILE:
 else:
     from tqdm import tqdm
 
+import random
 from random import sample
 
 
@@ -42,6 +41,7 @@ def unbiased():
     }
 
     subindex = dict()
+    random.seed(default_config.random_seed)
     for target, cls_paths in loader.BatchLoader._index.items():
         subindex[target] = {
             cls: sample(paths, target_subindex_size[target]) for cls, paths in cls_paths.items() if
@@ -62,6 +62,8 @@ def unbiased():
                 s = os.path.join(default_config.dataset_path, path)
                 t = os.path.join(random_path, path.split("/")[1])
                 copy_if_not_exists(s, t)
+    with open("subrandom-index.json", "w") as index:
+        json.dump(subindex, index)
 
 
 class HDF5:
