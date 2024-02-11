@@ -73,7 +73,7 @@ def method1(batch_loader: loader.BatchLoader, loader_params: list, pickling: boo
 
     if not loading:
         for idx, image_batch in enumerate(tqdm(feature_batches(batch_loader), desc=" features")):
-            curr_palette = palette.generate_palette(image_batch, verbose=True)
+            curr_palette = palette.generate_palette(image_batch, default_config.global_palette, verbose=True)
             palettes.append(curr_palette)
             print(f"Generated palette nr {idx}")
 

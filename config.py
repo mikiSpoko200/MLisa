@@ -5,7 +5,7 @@ import bitmath
 import typing
 
 
-PROFILE = True
+PROFILE = False
 
 
 @dataclasses.dataclass
