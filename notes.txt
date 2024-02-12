@@ -1,0 +1,21 @@
+.global
+  patch-width
+  patch-height
+  patching-factor = 1.0 // czy wolimy wiele obrazków po mało patchy, czy mało pobrazków po wiele patchy
+  batch-size       	// ile pamięci możemy użyć max podczas iteracji
+  image-width
+  image-height
+  image-area = (image-width - patch-width + 1) * (image-height - patch-height + 1)
+ 
+  patch-size = patch-height * patch-width
+  total-patch-count = batch-size / 
+  patches-per-image = image-area [* patching-factor] / patch-size
+
+
+patch-count(image)
+
+-- alternatywnie --
+bierz ustaloną ilość patchy z każdego obrazka -- wtedy juz dowonole rozmiary ale każda klasa 
+musi mieć tyle samo punków.
+
+
