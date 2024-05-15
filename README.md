@@ -1,4 +1,6 @@
-# ml-project
+# MLisa
+
+Fine art paiting classifier based on K-means feature learning algorithm. This project was inspired by Adam Coates' and Andrew Y. Ng's paper *Learning Feature Representations with K-means* (link)[https://www-cs.stanford.edu/~acoates/papers/coatesng_nntot2012.pdf]. Our goal was to implement image classifier using that approach in order to determine pros and cons of such process.
 
 # Ideas
 
